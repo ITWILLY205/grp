@@ -23,26 +23,6 @@ const indexJs = indexJsCandidates.sort((a, b) => {
 })[0];
 const cssFile = files.find(f => f.endsWith('.css'));
 
-// Patch the entry bundle: replace hydrateRoot(document, ...) with createRoot(document).render(...)
-// This is required because we deploy as a static site without SSR, so hydration would crash.
-const entryBundlePath = path.join(clientDir, indexJs);
-let bundleContent = fs.readFileSync(entryBundlePath, 'utf-8');
-const patchedContent = bundleContent.replace(
-  /\.hydrateRoot\s*\(\s*document\s*,/g,
-  '.createRoot(document).render('
-);
-if (patchedContent !== bundleContent) {
-  fs.writeFileSync(entryBundlePath, patchedContent);
-  // Also patch the copy in dist/assets (created by cpSync later)
-  const distAssetsPath = path.join(distDir, 'assets', indexJs);
-  if (fs.existsSync(distAssetsPath)) {
-    fs.writeFileSync(distAssetsPath, patchedContent);
-  }
-  console.log('Patched entry bundle: hydrateRoot -> createRoot().render()');
-} else {
-  console.warn('Warning: Could not find hydrateRoot call to patch in entry bundle.');
-}
-
 const html = `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -50,33 +30,39 @@ const html = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>School Management System</title>
     ${cssFile ? `<link rel="stylesheet" href="/assets/${cssFile}">` : ''}
+    <style>
+      #fallback { font-family: system-ui; padding: 40px; text-align: center; color: #333; }
+      #fallback h1 { margin: 0 0 16px; font-size: 24px; }
+      #fallback p { margin: 0; color: #666; }
+    </style>
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error('Global error:', e.error ? e.error.stack : e.message);
+        var fb = document.getElementById('fallback');
+        if (fb) { fb.innerHTML = '<h1>JavaScript Error</h1><p>' + (e.message || 'Unknown error') + '</p><p>Check the browser console for details.</p>'; }
+      });
+    </script>
   </head>
   <body>
-    <!-- Tanstack Start will hydrate this document -->
+    <div id="fallback">
+      <h1>Loading School Management System...</h1>
+      <p>If this message persists, JavaScript may be blocked or an error occurred.</p>
+    </div>
     <script type="module" src="/assets/${indexJs}"></script>
   </body>
 </html>`;
 
 fs.writeFileSync(path.join(distDir, 'index.html'), html);
-// Copy index.html to 404.html so static hosts serve it for all client-side routes
 fs.writeFileSync(path.join(distDir, '404.html'), html);
 
 // Copy contents of dist/client to dist
 import { cpSync } from 'fs';
 cpSync(path.join(__dirname, 'dist', 'client'), distDir, { recursive: true });
 
-// Re-apply patch to the copied bundle if cpSync overwrote it
-const copiedBundlePath = path.join(distDir, 'assets', indexJs);
-if (fs.existsSync(copiedBundlePath)) {
-  const copiedContent = fs.readFileSync(copiedBundlePath, 'utf-8');
-  if (!copiedContent.includes('.createRoot(document).render(')) {
-    fs.writeFileSync(copiedBundlePath, patchedContent);
-  }
-}
-
-// Generate vercel.json for SPA routing
+// vercel.json: serve existing files first, then fallback to index.html for SPA routes
 const vercelConfig = {
   "rewrites": [
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 };
