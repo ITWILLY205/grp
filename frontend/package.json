@@ -7,7 +7,7 @@
     "dev": "vite dev",
     "server": "tsx src/server/index.ts",
     "server:dev": "nodemon --watch src/server -e ts --exec npx tsx src/server/index.ts",
-    "build": "vite build",
+    "build": "vite build && node generate-index.js",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
