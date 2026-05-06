@@ -1,6 +1,5 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-
-import appCss from "../styles.css?url";
+import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
+import { Toaster } from "sonner";
 
 function NotFoundComponent() {
   return (
@@ -25,48 +24,15 @@ function NotFoundComponent() {
 }
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Esms — Modern School Management Platform" },
-      { name: "description", content: "All-in-one school management system for attendance, grades, e-learning, live classes, and analytics." },
-      { name: "author", content: "Esms" },
-      { property: "og:title", content: "Esms — Modern School Management Platform" },
-      { property: "og:description", content: "All-in-one school management system for attendance, grades, e-learning, live classes, and analytics." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });
 
-import { Toaster } from "sonner";
-
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Toaster position="top-right" richColors />
-        <Scripts />
-      </body>
-    </html>
-  );
-}
-
 function RootComponent() {
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <Toaster position="top-right" richColors />
+    </>
+  );
 }
