@@ -14,7 +14,13 @@ if (!fs.existsSync(clientDir)) {
 }
 
 const files = fs.readdirSync(clientDir);
-const indexJs = files.find(f => f.startsWith('index-') && f.endsWith('.js'));
+const indexJsCandidates = files.filter(f => f.startsWith('index-') && f.endsWith('.js'));
+// The entry bundle is always the largest (it includes React + router + vendors)
+const indexJs = indexJsCandidates.sort((a, b) => {
+  const sizeA = fs.statSync(path.join(clientDir, a)).size;
+  const sizeB = fs.statSync(path.join(clientDir, b)).size;
+  return sizeB - sizeA;
+})[0];
 const cssFile = files.find(f => f.endsWith('.css'));
 
 const html = `<!DOCTYPE html>
