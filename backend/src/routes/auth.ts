@@ -21,9 +21,16 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({
+    // Try to find user by username first, then by email
+    let user = await prisma.user.findUnique({
       where: { username },
     });
+
+    if (!user && username.includes('@')) {
+      user = await prisma.user.findFirst({
+        where: { email: username },
+      });
+    }
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });

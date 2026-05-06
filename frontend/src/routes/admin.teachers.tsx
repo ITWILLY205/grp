@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Search, Plus, Upload, Download, Filter, User, Eye, Edit, Trash2, MoreVertical, ChevronDown, Mail, Phone, Calendar, BookOpen, AlertTriangle } from "lucide-react";
+import { peopleApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/teachers")({
   component: AdminTeachers,
@@ -38,132 +40,6 @@ interface Teacher {
   contractType: string;
 }
 
-const teachersData: Teacher[] = [
-  { 
-    id: 1, 
-    indexNumber: "TCH-001", 
-    name: "John Mugabo", 
-    gender: "Male", 
-    dob: "1985-03-15", 
-    email: "john.mugabo@school.com", 
-    phone: "+250788123456",
-    nationalId: "1199080012345678",
-    address: "KG 123 St",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Christian",
-    bloodGroup: "O+",
-    qualification: "Masters in Education",
-    department: "Science",
-    specialization: "Mathematics",
-    employmentDate: "2020-01-15",
-    status: "Active",
-    subjects: ["Mathematics", "Physics"],
-    classes: ["Form 3", "Form 4"],
-    emergencyContact: "Jane Mugabo",
-    emergencyPhone: "+250732123456",
-    bankAccount: "1234567890",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234567",
-    nssfNumber: "NSSF123456",
-    salary: 800000,
-    contractType: "Permanent"
-  },
-  { 
-    id: 2, 
-    indexNumber: "TCH-002", 
-    name: "Sarah Uwimana", 
-    gender: "Female", 
-    dob: "1990-07-22", 
-    email: "sarah.uwimana@school.com", 
-    phone: "+250787234567",
-    nationalId: "1199080012345679",
-    address: "KN 456 Ave",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Muslim",
-    bloodGroup: "A+",
-    qualification: "Bachelors in Science",
-    department: "Science",
-    specialization: "Chemistry",
-    employmentDate: "2021-08-01",
-    status: "Active",
-    subjects: ["Chemistry", "Biology"],
-    classes: ["Form 2", "Form 3"],
-    emergencyContact: "Peter Uwimana",
-    emergencyPhone: "+250734234567",
-    bankAccount: "0987654321",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234568",
-    nssfNumber: "NSSF123457",
-    salary: 750000,
-    contractType: "Permanent"
-  },
-  { 
-    id: 3, 
-    indexNumber: "TCH-003", 
-    name: "David Habimana", 
-    gender: "Male", 
-    dob: "1988-11-10", 
-    email: "david.habimana@school.com", 
-    phone: "+250789345678",
-    nationalId: "1199080012345680",
-    address: "NY 789 Rd",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Christian",
-    bloodGroup: "B+",
-    qualification: "Masters in Literature",
-    department: "Languages",
-    specialization: "English",
-    employmentDate: "2019-03-20",
-    status: "Active",
-    subjects: ["English", "Literature"],
-    classes: ["Form 1", "Form 2"],
-    emergencyContact: "Grace Habimana",
-    emergencyPhone: "+250735345678",
-    bankAccount: "1122334455",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234569",
-    nssfNumber: "NSSF123458",
-    salary: 780000,
-    contractType: "Permanent"
-  },
-  { 
-    id: 4, 
-    indexNumber: "TCH-004", 
-    name: "Grace Mukamana", 
-    gender: "Female", 
-    dob: "1992-05-18", 
-    email: "grace.mukamana@school.com", 
-    phone: "+250786456789",
-    nationalId: "1199080012345681",
-    address: "KG 321 St",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Christian",
-    bloodGroup: "AB+",
-    qualification: "Bachelors in Arts",
-    department: "Social Studies",
-    specialization: "History",
-    employmentDate: "2022-02-10",
-    status: "Active",
-    subjects: ["History", "Geography"],
-    classes: ["Form 4", "Form 5"],
-    emergencyContact: "Joseph Mukamana",
-    emergencyPhone: "+250736456789",
-    bankAccount: "2233445566",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234570",
-    nssfNumber: "NSSF123459",
-    salary: 720000,
-    contractType: "Permanent"
-  },
-];
 
 export function AdminTeachers() {
   const navigate = useNavigate();
@@ -182,12 +58,60 @@ export function AdminTeachers() {
   const [filterDepartment, setFilterDepartment] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterContractType, setFilterContractType] = useState("");
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      setIsLoading(true);
+      try {
+        const response = await peopleApi.getTeachers();
+        const mappedTeachers = response.data.map((apiTeacher: any) => ({
+          id: apiTeacher.id,
+          indexNumber: apiTeacher.staff_id || "",
+          name: apiTeacher.user?.full_name || "",
+          gender: "",
+          dob: "",
+          email: apiTeacher.user?.email || "",
+          phone: "",
+          nationalId: "",
+          address: "",
+          city: "",
+          district: "",
+          nationality: "",
+          religion: "",
+          bloodGroup: "",
+          qualification: "",
+          department: "",
+          specialization: apiTeacher.specialization || "",
+          employmentDate: "",
+          status: "Active",
+          subjects: Array.from(new Set((apiTeacher.assignments || []).map((a: any) => a.subject?.name).filter(Boolean))),
+          classes: Array.from(new Set((apiTeacher.assignments || []).map((a: any) => a.stream?.class?.name).filter(Boolean))),
+          emergencyContact: "",
+          emergencyPhone: "",
+          bankAccount: "",
+          bankName: "",
+          tinNumber: "",
+          nssfNumber: "",
+          salary: 0,
+          contractType: "Permanent"
+        }));
+        setTeachers(mappedTeachers);
+      } catch (error) {
+        toast.error("Failed to load teachers");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTeachers();
+  }, []);
 
   const departments = ["Science", "Languages", "Social Studies", "Mathematics", "Arts"];
   const statuses = ["Active", "Inactive", "On Leave", "Terminated"];
   const contractTypes = ["Permanent", "Contract", "Part-time"];
 
-  const filteredTeachers = teachersData.filter((teacher) => {
+  const filteredTeachers = teachers.filter((teacher) => {
     const matchesSearch = searchTerm.trim() === "" || 
       teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       teacher.indexNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -225,36 +149,26 @@ export function AdminTeachers() {
       case "delete":
         if (confirm(`Are you sure you want to delete ${teacher.name}?`)) {
           // Remove teacher from data
-          const index = teachersData.findIndex(t => t.id === teacher.id);
-          if (index > -1) {
-            teachersData.splice(index, 1);
-            alert("Teacher deleted successfully!");
-            // Force re-render by updating state
-            setFilterDepartment(prev => prev);
-          }
+          setTeachers(prev => prev.filter(t => t.id !== teacher.id));
+          alert("Teacher deleted successfully!");
         }
         break;
       case "suspend":
-        // Toggle teacher status
-        const teacherIndex = teachersData.findIndex(t => t.id === teacher.id);
-        if (teacherIndex > -1) {
-          teachersData[teacherIndex].status = teacher.status === "Active" ? "Inactive" : "Active";
-          alert(`Teacher ${teacher.status === "Active" ? "suspended" : "activated"} successfully!`);
-          setFilterDepartment(prev => prev);
-        }
+        const newStatus = teacher.status === "Active" ? "Inactive" : "Active";
+        setTeachers(prev => prev.map(t => t.id === teacher.id ? { ...t, status: newStatus } : t));
+        alert(`Teacher ${teacher.status === "Active" ? "suspended" : "activated"} successfully!`);
         break;
       case "assign":
         // Show assign subjects/classes dialog
         const newSubjects = prompt("Enter subjects (comma separated):", teacher.subjects.join(", "));
         const newClasses = prompt("Enter classes (comma separated):", teacher.classes.join(", "));
         if (newSubjects !== null && newClasses !== null) {
-          const assignIndex = teachersData.findIndex(t => t.id === teacher.id);
-          if (assignIndex > -1) {
-            teachersData[assignIndex].subjects = newSubjects.split(",").map(s => s.trim()).filter(s => s);
-            teachersData[assignIndex].classes = newClasses.split(",").map(c => c.trim()).filter(c => c);
-            alert("Subjects and classes assigned successfully!");
-            setFilterDepartment(prev => prev);
-          }
+          setTeachers(prev => prev.map(t => t.id === teacher.id ? {
+            ...t,
+            subjects: newSubjects.split(",").map(s => s.trim()).filter(s => s),
+            classes: newClasses.split(",").map(c => c.trim()).filter(c => c)
+          } : t));
+          alert("Subjects and classes assigned successfully!");
         }
         break;
     }
@@ -270,18 +184,13 @@ export function AdminTeachers() {
     if (confirmAction === "suspend" && selectedTeacher) {
       const currentStatus = selectedTeacher.status;
       const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
-      const index = teachersData.findIndex(t => t.id === selectedTeacher.id);
-      if (index > -1) {
-        teachersData[index].status = newStatus;
-        window.location.reload(); // Refresh to show updated status
-      }
+      setTeachers(prev => prev.map(t => t.id === selectedTeacher.id ? { ...t, status: newStatus } : t));
+      setShowConfirmModal(false);
     } else if (confirmAction === "delete" && selectedTeacher) {
-      const deleteIndex = teachersData.findIndex(t => t.id === selectedTeacher.id);
-      if (deleteIndex > -1) {
-        teachersData.splice(deleteIndex, 1);
-        setViewMode("list");
-        setSelectedTeacher(null);
-      }
+      setTeachers(prev => prev.filter(t => t.id !== selectedTeacher.id));
+      setViewMode("list");
+      setSelectedTeacher(null);
+      setShowConfirmModal(false);
     }
   };
 
@@ -296,7 +205,7 @@ export function AdminTeachers() {
     };
 
     window.addEventListener('showConfirmModal', handleShowConfirmModal);
-    
+
     return () => {
       window.removeEventListener('showConfirmModal', handleShowConfirmModal);
     };
@@ -311,13 +220,13 @@ export function AdminTeachers() {
         // Parse CSV or Excel (simplified for demo)
         const lines = content.split('\n').filter(line => line.trim());
         let importedCount = 0;
-        
+
         lines.slice(1).forEach((line, index) => {
           const [name, email, phone, department] = line.split(',').map(item => item.trim().replace(/"/g, ''));
           if (name && email && phone && department) {
             const newTeacher: Teacher = {
-              id: Math.max(...teachersData.map(t => t.id)) + 1 + index,
-              indexNumber: `TCH-${String(Math.max(...teachersData.map(t => t.id)) + 1 + index).padStart(3, '0')}`,
+              id: Math.max(...teachers.map(t => t.id), 0) + 1 + index,
+              indexNumber: `TCH-${String(Math.max(...teachers.map(t => t.id), 0) + 1 + index).padStart(3, '0')}`,
               name,
               email,
               phone,
@@ -325,19 +234,32 @@ export function AdminTeachers() {
               gender: "",
               dob: "",
               nationalId: "",
+              address: "",
+              city: "",
+              district: "",
+              nationality: "",
+              religion: "",
+              bloodGroup: "",
               qualification: "",
               specialization: "",
               employmentDate: new Date().toISOString().split('T')[0],
               status: "Active",
               subjects: [],
               classes: [],
+              emergencyContact: "",
+              emergencyPhone: "",
+              bankAccount: "",
+              bankName: "",
+              tinNumber: "",
+              nssfNumber: "",
+              salary: 0,
               contractType: "Permanent"
             };
-            teachersData.push(newTeacher);
+            setTeachers(prev => [...prev, newTeacher]);
             importedCount++;
           }
         });
-        
+
         alert(`Successfully imported ${importedCount} teachers!`);
         setShowImportModal(false);
         setFilterDepartment(prev => prev);
@@ -364,7 +286,7 @@ export function AdminTeachers() {
           teacher.classes.join(';')
         ].join(','))
       ].join('\n');
-      
+
       // Download CSV
       const blob = new Blob([csvContent], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
@@ -404,7 +326,7 @@ export function AdminTeachers() {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              
+
               {/* Action Buttons */}
               <div className="flex gap-2">
                 <button
@@ -431,57 +353,57 @@ export function AdminTeachers() {
 
             {/* Filters Panel */}
             {showFilters && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Department</label>
-                  <select
-                    value={filterDepartment}
-                    onChange={(e) => setFilterDepartment(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Departments</option>
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Status</option>
-                    {statuses.map((status) => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Contract Type</label>
-                  <select
-                    value={filterContractType}
-                    onChange={(e) => setFilterContractType(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Contract Types</option>
-                    {contractTypes.map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={() => { setFilterDepartment(""); setFilterStatus(""); setFilterContractType(""); }}
-                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
-                  >
-                    Clear Filters
-                  </button>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Department</label>
+                    <select
+                      value={filterDepartment}
+                      onChange={(e) => setFilterDepartment(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">All Departments</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">All Status</option>
+                      {statuses.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Contract Type</label>
+                    <select
+                      value={filterContractType}
+                      onChange={(e) => setFilterContractType(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">All Contract Types</option>
+                      {contractTypes.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => { setFilterDepartment(""); setFilterStatus(""); setFilterContractType(""); }}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
             )}
 
             {/* Statistics Cards */}
@@ -504,7 +426,7 @@ export function AdminTeachers() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {teachersData.filter(t => t.status === "Active").length}
+                      {teachers.filter(t => t.status === "Active").length}
                     </p>
                     <p className="text-sm text-gray-600">Active Teachers</p>
                   </div>
@@ -528,7 +450,7 @@ export function AdminTeachers() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {Math.round(teachersData.reduce((acc, t) => acc + (t.salary || 0), 0) / 1000000)}M
+                      {Math.round(teachers.reduce((acc, t) => acc + (t.salary || 0), 0) / 1000000)}M
                     </p>
                     <p className="text-sm text-gray-600">Total Payroll</p>
                   </div>
@@ -546,7 +468,7 @@ export function AdminTeachers() {
                   Showing {filteredTeachers.length} teacher{filteredTeachers.length !== 1 ? 's' : ''}
                 </p>
               </div>
-              
+
               {filteredTeachers.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -562,9 +484,9 @@ export function AdminTeachers() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {filteredTeachers.map((teacher) => (
-                        <tr 
-                          key={teacher.id} 
-                          className="hover:bg-gray-50 cursor-pointer" 
+                        <tr
+                          key={teacher.id}
+                          className="hover:bg-gray-50 cursor-pointer"
                           onClick={() => handleTeacherRowClick(teacher)}
                         >
                           <td className="px-6 py-4">
@@ -592,9 +514,9 @@ export function AdminTeachers() {
                           <td className="px-6 py-4">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                               teacher.status === "Active" ? "bg-green-100 text-green-800" :
-                              teacher.status === "Inactive" ? "bg-gray-100 text-gray-800" :
-                              teacher.status === "On Leave" ? "bg-yellow-100 text-yellow-800" :
-                              "bg-red-100 text-red-800"
+                                teacher.status === "Inactive" ? "bg-gray-100 text-gray-800" :
+                                  teacher.status === "On Leave" ? "bg-yellow-100 text-yellow-800" :
+                                    "bg-red-100 text-red-800"
                             }`}>
                               {teacher.status}
                             </span>
@@ -610,7 +532,7 @@ export function AdminTeachers() {
                               >
                                 <MoreVertical className="h-4 w-4" />
                               </button>
-                              
+
                               {activeDropdown === teacher.id && (
                                 <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                                   <button
@@ -680,7 +602,7 @@ export function AdminTeachers() {
             >
               ← Back to Teachers
             </button>
-            <AddTeacherForm onBack={handleBackToList} editTeacher={selectedTeacher} />
+            <AddTeacherForm onBack={handleBackToList} editTeacher={selectedTeacher} teachers={teachers} setTeachers={setTeachers} />
           </div>
         )}
 
@@ -706,7 +628,7 @@ export function AdminTeachers() {
             >
               ← Back to Teachers
             </button>
-            <AssignClasses teacher={selectedTeacher} onBack={handleBackToList} />
+            <AssignClasses teacher={selectedTeacher} onBack={handleBackToList} setTeachers={setTeachers} />
           </div>
         )}
 
@@ -745,11 +667,11 @@ export function AdminTeachers() {
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
                 <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
                 <p className="text-sm text-gray-600">Drag & drop your file here, or click to browse</p>
-                <input 
-                  type="file" 
-                  accept=".csv,.xlsx,.xls" 
-                  className="hidden" 
-                  id="importFile" 
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  className="hidden"
+                  id="importFile"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
@@ -832,14 +754,13 @@ export function AdminTeachers() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
 }
 
 // Add Teacher Form Component
-function AddTeacherForm({ onBack, editTeacher }: { onBack: () => void; editTeacher?: Teacher | null }) {
+function AddTeacherForm({ onBack, editTeacher, teachers, setTeachers }: { onBack: () => void; editTeacher?: Teacher | null; teachers: Teacher[]; setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>; }) {
   const isEdit = !!editTeacher;
   const [formData, setFormData] = useState({
     indexNumber: editTeacher?.indexNumber || "",
@@ -878,52 +799,48 @@ function AddTeacherForm({ onBack, editTeacher }: { onBack: () => void; editTeach
 
   const handleSubmit = () => {
     // Validate required fields
-    if (!formData.name || !formData.email || !formData.phone || !formData.nationalId || 
-        !formData.qualification || !formData.department || !formData.specialization || 
-        !formData.employmentDate || !formData.contractType || !formData.status) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.nationalId ||
+      !formData.qualification || !formData.department || !formData.specialization ||
+      !formData.employmentDate || !formData.contractType || !formData.status) {
       alert("Please fill in all required fields.");
       return;
     }
 
     if (isEdit && editTeacher) {
-      // Update existing teacher
-      const index = teachersData.findIndex(t => t.id === editTeacher.id);
-      if (index > -1) {
-        teachersData[index] = {
-          ...teachersData[index],
-          ...formData,
-          subjects: formData.subjects.split(",").map(s => s.trim()).filter(s => s),
-          classes: formData.classes.split(",").map(c => c.trim()).filter(c => c),
-          salary: formData.salary ? parseInt(formData.salary) : 0
-        };
-        alert("Teacher updated successfully!");
-      }
-    } else {
-      // Add new teacher
-      const newTeacher: Teacher = {
-        id: Math.max(...teachersData.map(t => t.id)) + 1,
+      setTeachers(prev => prev.map(t => t.id === editTeacher.id ? {
+        ...t,
         ...formData,
-        indexNumber: `TCH-${String(Math.max(...teachersData.map(t => t.id)) + 1).padStart(3, '0')}`,
+        subjects: formData.subjects.split(",").map(s => s.trim()).filter(s => s),
+        classes: formData.classes.split(",").map(c => c.trim()).filter(c => c),
+        salary: formData.salary ? parseInt(formData.salary) : 0
+      } : t));
+      alert("Teacher updated successfully!");
+    } else {
+      const newId = Math.max(...teachers.map(t => t.id), 0) + 1;
+      const newTeacher: Teacher = {
+        id: newId,
+        ...formData,
+        indexNumber: `TCH-${String(newId).padStart(3, '0')}`,
         subjects: formData.subjects.split(",").map(s => s.trim()).filter(s => s),
         classes: formData.classes.split(",").map(c => c.trim()).filter(c => c),
         salary: formData.salary ? parseInt(formData.salary) : 0
       };
-      teachersData.push(newTeacher);
+      setTeachers(prev => [...prev, newTeacher]);
       alert("Teacher added successfully!");
     }
-    
+
     onBack();
   };
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <h2 className="text-xl font-bold text-gray-900 mb-6">{isEdit ? "Edit Teacher" : "Add New Teacher"}</h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Personal Information */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Personal Information</h3>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
             <input
@@ -1077,7 +994,7 @@ function AddTeacherForm({ onBack, editTeacher }: { onBack: () => void; editTeach
         {/* Professional Information */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Professional Information</h3>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Qualification *</label>
             <input
@@ -1180,7 +1097,7 @@ function AddTeacherForm({ onBack, editTeacher }: { onBack: () => void; editTeach
         {/* Financial Information */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Financial Information</h3>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Salary (RWF) *</label>
             <input
@@ -1242,7 +1159,7 @@ function AddTeacherForm({ onBack, editTeacher }: { onBack: () => void; editTeach
         {/* Emergency Contact */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Emergency Contact</h3>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Name</label>
@@ -1271,13 +1188,13 @@ function AddTeacherForm({ onBack, editTeacher }: { onBack: () => void; editTeach
       <div className="mt-6 flex gap-3">
         <button
           onClick={handleSubmit}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           {isEdit ? "Update Teacher" : "Add Teacher"}
         </button>
         <button
           onClick={onBack}
-          className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+          className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
         >
           Cancel
         </button>
@@ -1287,9 +1204,9 @@ function AddTeacherForm({ onBack, editTeacher }: { onBack: () => void; editTeach
 }
 
 // Teacher Profile Component
-function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, onSendNotification }: { 
-  teacher: Teacher; 
-  onBack: () => void; 
+function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, onSendNotification }: {
+  teacher: Teacher;
+  onBack: () => void;
   onEdit: () => void;
   onAssign: () => void;
   onResetPassword: () => void;
@@ -1348,14 +1265,14 @@ function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, on
               <p className="text-sm text-gray-500">{teacher.indexNumber}</p>
               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mt-2 ${
                 teacher.status === "Active" ? "bg-green-100 text-green-800" :
-                teacher.status === "Inactive" ? "bg-gray-100 text-gray-800" :
-                teacher.status === "On Leave" ? "bg-yellow-100 text-yellow-800" :
-                "bg-red-100 text-red-800"
+                  teacher.status === "Inactive" ? "bg-gray-100 text-gray-800" :
+                    teacher.status === "On Leave" ? "bg-yellow-100 text-yellow-800" :
+                      "bg-red-100 text-red-800"
               }`}>
                 {teacher.status}
               </span>
             </div>
-            
+
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-gray-400" />
@@ -1370,7 +1287,7 @@ function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, on
                 <span className="text-gray-600">DOB: {teacher.dob}</span>
               </div>
             </div>
-            
+
             {/* Quick Actions */}
             <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
               <button
@@ -1380,7 +1297,7 @@ function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, on
                 <Edit className="h-4 w-4" />
                 Edit Teacher
               </button>
-              
+
               <button
                 onClick={() => handleQuickAction("assign")}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
@@ -1388,12 +1305,12 @@ function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, on
                 <BookOpen className="h-4 w-4" />
                 Assign Classes
               </button>
-              
+
               <button
                 onClick={() => handleQuickAction("suspend")}
                 className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 ${
-                  teacher.status === "Active" 
-                    ? "bg-yellow-600 text-white hover:bg-yellow-700" 
+                  teacher.status === "Active"
+                    ? "bg-yellow-600 text-white hover:bg-yellow-700"
                     : "bg-green-600 text-white hover:bg-green-700"
                 }`}
               >
@@ -1409,7 +1326,7 @@ function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, on
                   </>
                 )}
               </button>
-              
+
               <button
                 onClick={() => handleQuickAction("resetPassword")}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
@@ -1417,7 +1334,7 @@ function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, on
                 <Mail className="h-4 w-4" />
                 Reset Password
               </button>
-              
+
               <button
                 onClick={() => handleQuickAction("sendNotification")}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
@@ -1425,7 +1342,7 @@ function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, on
                 <Phone className="h-4 w-4" />
                 Send Notification
               </button>
-              
+
               <button
                 onClick={() => handleQuickAction("delete")}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
@@ -1613,24 +1530,24 @@ function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, on
 }
 
 // Assign Classes Component
-function AssignClasses({ teacher, onBack }: { teacher: Teacher; onBack: () => void }) {
+function AssignClasses({ teacher, onBack, setTeachers }: { teacher: Teacher; onBack: () => void; setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>; }) {
   const [selectedSubjects, setSelectedSubjects] = useState(teacher.subjects);
   const [selectedClasses, setSelectedClasses] = useState(teacher.classes);
-  
+
   const availableSubjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Literature", "History", "Geography"];
   const availableClasses = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6"];
 
   const handleSubjectToggle = (subject: string) => {
-    setSelectedSubjects(prev => 
-      prev.includes(subject) 
+    setSelectedSubjects(prev =>
+      prev.includes(subject)
         ? prev.filter(s => s !== subject)
         : [...prev, subject]
     );
   };
 
   const handleClassToggle = (cls: string) => {
-    setSelectedClasses(prev => 
-      prev.includes(cls) 
+    setSelectedClasses(prev =>
+      prev.includes(cls)
         ? prev.filter(c => c !== cls)
         : [...prev, cls]
     );
@@ -1641,19 +1558,16 @@ function AssignClasses({ teacher, onBack }: { teacher: Teacher; onBack: () => vo
       alert("Please select at least one subject and one class");
       return;
     }
-    
-    const index = teachersData.findIndex(t => t.id === teacher.id);
-    if (index > -1) {
-      teachersData[index].subjects = selectedSubjects;
-      teachersData[index].classes = selectedClasses;
-      alert(`Classes assigned successfully!\n\nSubjects: ${selectedSubjects.join(", ")}\nClasses: ${selectedClasses.join(", ")}`);
-      onBack();
-    }
+
+    setTeachers(prev => prev.map(t => t.id === teacher.id ? { ...t, subjects: selectedSubjects, classes: selectedClasses } : t));
+    alert(`Classes assigned successfully!\n\nSubjects: ${selectedSubjects.join(", ")}\nClasses: ${selectedClasses.join(", ")}`);
+    onBack();
   };
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
       <h3 className="text-xl font-semibold text-gray-900 mb-4">Assign Classes & Subjects</h3>
+
       
       <div className="mb-6 p-4 bg-blue-50 rounded-lg">
         <div className="flex items-center gap-4">

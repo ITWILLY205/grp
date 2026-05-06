@@ -35,32 +35,31 @@ function TeacherMarks() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchClasses();
-    fetchMySubjects();
+    fetchMyData();
   }, []);
 
-  const fetchClasses = async () => {
-    try {
-      const response = await academicApi.getClasses();
-      setClassesList(response.data);
-    } catch (error) {
-      toast.error("Failed to load classes");
-    }
-  };
-
-  const fetchMySubjects = async () => {
+  const fetchMyData = async () => {
+    setIsLoading(true);
     try {
       const response = await peopleApi.getTeacherMe();
       const assignments = response.data.assignments || [];
+
       const uniqueSubjects = new Map();
+      const uniqueClasses = new Map();
       assignments.forEach((a: any) => {
         if (a.subject && !uniqueSubjects.has(a.subject.id)) {
           uniqueSubjects.set(a.subject.id, { id: a.subject.id, name: a.subject.name });
         }
+        if (a.stream?.class && !uniqueClasses.has(a.stream.class.id)) {
+          uniqueClasses.set(a.stream.class.id, { id: a.stream.class.id, name: a.stream.class.name });
+        }
       });
       setMySubjects(Array.from(uniqueSubjects.values()));
+      setClassesList(Array.from(uniqueClasses.values()));
     } catch (error) {
-      toast.error("Failed to load your subjects");
+      toast.error("Failed to load your assignments");
+    } finally {
+      setIsLoading(false);
     }
   };
 

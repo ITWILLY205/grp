@@ -17,15 +17,22 @@ function TeacherAttendance() {
   const [students, setStudents] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchClasses();
+    fetchMyClasses();
   }, []);
 
-  const fetchClasses = async () => {
+  const fetchMyClasses = async () => {
     try {
-      const response = await academicApi.getClasses();
-      setClassesList(response.data);
+      const response = await peopleApi.getTeacherMe();
+      const assignments = response.data.assignments || [];
+      const uniqueClasses = new Map();
+      assignments.forEach((a: any) => {
+        if (a.stream?.class && !uniqueClasses.has(a.stream.class.id)) {
+          uniqueClasses.set(a.stream.class.id, { id: a.stream.class.id, name: a.stream.class.name });
+        }
+      });
+      setClassesList(Array.from(uniqueClasses.values()));
     } catch (error) {
-      toast.error("Failed to load classes");
+      toast.error("Failed to load your classes");
     }
   };
 
