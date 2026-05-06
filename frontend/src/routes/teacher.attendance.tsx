@@ -32,7 +32,7 @@ function TeacherAttendance() {
   const fetchStudentsForClass = async (className: string) => {
     try {
       const response = await peopleApi.getStudents();
-      const filtered = response.data.filter((s: any) => (s.class_name || s.class) === className);
+      const filtered = response.data.filter((s: any) => (s.class_name || s.class?.name) === className);
       setStudents(filtered);
     } catch (error) {
       toast.error("Failed to load students");

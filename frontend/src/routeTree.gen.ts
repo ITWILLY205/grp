@@ -17,6 +17,7 @@ import { Route as StudentRouteImport } from './routes/student'
 import { Route as StaffRegistrationRouteImport } from './routes/staff-registration'
 import { Route as StaffLoginRouteImport } from './routes/staff-login'
 import { Route as StaffDashboardRouteImport } from './routes/staff-dashboard'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as RegistrationRouteImport } from './routes/registration'
 import { Route as RegisterParentRouteImport } from './routes/register-parent'
 import { Route as ParentRouteImport } from './routes/parent'
@@ -135,6 +136,11 @@ const StaffLoginRoute = StaffLoginRouteImport.update({
 const StaffDashboardRoute = StaffDashboardRouteImport.update({
   id: '/staff-dashboard',
   path: '/staff-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegistrationRoute = RegistrationRouteImport.update({
@@ -559,6 +565,7 @@ export interface FileRoutesByFullPath {
   '/parent': typeof ParentRouteWithChildren
   '/register-parent': typeof RegisterParentRoute
   '/registration': typeof RegistrationRoute
+  '/setup': typeof SetupRoute
   '/staff-dashboard': typeof StaffDashboardRoute
   '/staff-login': typeof StaffLoginRoute
   '/staff-registration': typeof StaffRegistrationRoute
@@ -645,6 +652,7 @@ export interface FileRoutesByTo {
   '/maintenance': typeof MaintenanceRoute
   '/register-parent': typeof RegisterParentRoute
   '/registration': typeof RegistrationRoute
+  '/setup': typeof SetupRoute
   '/staff-dashboard': typeof StaffDashboardRoute
   '/staff-login': typeof StaffLoginRoute
   '/staff-registration': typeof StaffRegistrationRoute
@@ -733,6 +741,7 @@ export interface FileRoutesById {
   '/parent': typeof ParentRouteWithChildren
   '/register-parent': typeof RegisterParentRoute
   '/registration': typeof RegistrationRoute
+  '/setup': typeof SetupRoute
   '/staff-dashboard': typeof StaffDashboardRoute
   '/staff-login': typeof StaffLoginRoute
   '/staff-registration': typeof StaffRegistrationRoute
@@ -824,6 +833,7 @@ export interface FileRouteTypes {
     | '/parent'
     | '/register-parent'
     | '/registration'
+    | '/setup'
     | '/staff-dashboard'
     | '/staff-login'
     | '/staff-registration'
@@ -910,6 +920,7 @@ export interface FileRouteTypes {
     | '/maintenance'
     | '/register-parent'
     | '/registration'
+    | '/setup'
     | '/staff-dashboard'
     | '/staff-login'
     | '/staff-registration'
@@ -997,6 +1008,7 @@ export interface FileRouteTypes {
     | '/parent'
     | '/register-parent'
     | '/registration'
+    | '/setup'
     | '/staff-dashboard'
     | '/staff-login'
     | '/staff-registration'
@@ -1087,6 +1099,7 @@ export interface RootRouteChildren {
   ParentRoute: typeof ParentRouteWithChildren
   RegisterParentRoute: typeof RegisterParentRoute
   RegistrationRoute: typeof RegistrationRoute
+  SetupRoute: typeof SetupRoute
   StaffDashboardRoute: typeof StaffDashboardRoute
   StaffLoginRoute: typeof StaffLoginRoute
   StaffRegistrationRoute: typeof StaffRegistrationRoute
@@ -1153,6 +1166,13 @@ declare module '@tanstack/react-router' {
       path: '/staff-dashboard'
       fullPath: '/staff-dashboard'
       preLoaderRoute: typeof StaffDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/registration': {
@@ -1932,6 +1952,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParentRoute: ParentRouteWithChildren,
   RegisterParentRoute: RegisterParentRoute,
   RegistrationRoute: RegistrationRoute,
+  SetupRoute: SetupRoute,
   StaffDashboardRoute: StaffDashboardRoute,
   StaffLoginRoute: StaffLoginRoute,
   StaffRegistrationRoute: StaffRegistrationRoute,

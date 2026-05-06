@@ -36,6 +36,8 @@ function AddStudent() {
   const [classesList, setClassesList] = useState<{id: number, name: string}[]>([]);
   const [studentCount, setStudentCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [useManualClass, setUseManualClass] = useState(false);
+  const [manualClassName, setManualClassName] = useState("");
 
   useEffect(() => {
     academicApi.getClasses().then(res => setClassesList(res.data));
@@ -71,28 +73,59 @@ function AddStudent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.firstName || !formData.lastName || !formData.class || !formData.email) {
+    if (!formData.firstName || !formData.lastName || !formData.email) {
       toast.error("Please fill in required fields");
+      return;
+    }
+    if (!useManualClass && !formData.class) {
+      toast.error("Please select a class from the list");
+      return;
+    }
+    if (useManualClass && !manualClassName.trim()) {
+      toast.error("Please enter a class name");
       return;
     }
 
     setIsLoading(true);
     try {
+      let classId: number | undefined = undefined;
+
+      if (useManualClass && manualClassName.trim()) {
+        // Create class if it doesn't exist
+        try {
+          const classRes = await academicApi.addClass(manualClassName.trim());
+          classId = classRes.data.class.id;
+          toast.success(`New class "${manualClassName.trim()}" created`);
+        } catch (err: any) {
+          // Class might already exist, try to find it
+          const classesRes = await academicApi.getClasses();
+          const existing = classesRes.data.find((c: any) => c.name.toLowerCase() === manualClassName.trim().toLowerCase());
+          if (existing) {
+            classId = existing.id;
+          } else {
+            throw new Error("Failed to create or find class");
+          }
+        }
+      } else if (formData.class) {
+        classId = parseInt(formData.class);
+      }
+
       const studentId = generateStudentId();
       await peopleApi.addStudent({
         username: formData.email.split('@')[0],
         password: 'student123', // Default
         full_name: `${formData.firstName} ${formData.lastName}`,
         student_id: studentId,
-        class_id: parseInt(formData.class),
+        class_id: classId,
         parent_name: formData.fatherName || formData.motherName,
         parent_phone: formData.fatherPhone || formData.motherPhone
       });
-      
+
       toast.success(`Student ${formData.firstName} added! ID: ${studentId}`);
       navigate({ to: "/admin/users" });
-    } catch (error) {
-      toast.error("Failed to save student to database");
+    } catch (error: any) {
+      console.error('Add student error:', error);
+      toast.error(error.response?.data?.error || error.message || "Failed to save student to database");
     } finally {
       setIsLoading(false);
     }
@@ -233,23 +266,54 @@ function AddStudent() {
               </div>
 
               {/* Class/Level */}
-              <div>
+              <div className="md:col-span-2 lg:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Class/Level *
                 </label>
-                <select
-                  value={formData.class}
-                  onChange={(e) => handleInputChange("class", e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                >
-                  <option value="">Select Class</option>
-                  {classesList.map((cls) => (
-                    <option key={cls.id} value={cls.id.toString()}>
-                      {cls.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-4 mb-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      checked={!useManualClass}
+                      onChange={() => { setUseManualClass(false); handleInputChange("class", ""); setManualClassName(""); }}
+                      className="h-4 w-4 text-primary"
+                    />
+                    Select from list
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      checked={useManualClass}
+                      onChange={() => { setUseManualClass(true); handleInputChange("class", ""); setManualClassName(""); }}
+                      className="h-4 w-4 text-primary"
+                    />
+                    Enter manually
+                  </label>
+                </div>
+                {!useManualClass ? (
+                  <select
+                    value={formData.class}
+                    onChange={(e) => handleInputChange("class", e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required={!useManualClass}
+                  >
+                    <option value="">Select Class</option>
+                    {classesList.map((cls) => (
+                      <option key={cls.id} value={cls.id.toString()}>
+                        {cls.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={manualClassName}
+                    onChange={(e) => setManualClassName(e.target.value)}
+                    placeholder="Enter class name (e.g. Form 1, S1, etc.)"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required={useManualClass}
+                  />
+                )}
               </div>
 
               {/* Mother Name */}

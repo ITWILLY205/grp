@@ -46,6 +46,8 @@ function StudentLoginPage() {
           return;
         }
         
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem("session_user", JSON.stringify({ role: "student", id: user.id, name: user.full_name }));
         logLogin(user.full_name, indexNumber, "student", { loginMethod: "database_index" });
         navigate({ to: "/student" });

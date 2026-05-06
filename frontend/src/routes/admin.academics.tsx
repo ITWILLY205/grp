@@ -92,11 +92,13 @@ function AcademicStructure() {
   const [years, setYears] = useState<{id: number, name: string, status: string}[]>([]);
   const [terms, setTerms] = useState<{id: number, name: string, year_name: string, start_date: string, end_date: string}[]>([]);
   const [classes, setClasses] = useState<{id: number, name: string}[]>([]);
+  const [subjects, setSubjects] = useState<{id: number, name: string, code?: string, category?: string}[]>([]);
 
   useEffect(() => {
     fetchYears();
     fetchTerms();
     fetchClasses();
+    fetchSubjects();
   }, []);
 
   const fetchYears = async () => {
@@ -126,8 +128,21 @@ function AcademicStructure() {
     }
   };
 
+  const fetchSubjects = async () => {
+    try {
+      const response = await academicApi.getSubjects();
+      setSubjects(response.data);
+    } catch (error) {
+      toast.error("Failed to load subjects");
+    }
+  };
+
   const [showAddYear, setShowAddYear] = useState(false);
   const [newYearName, setNewYearName] = useState("");
+  const [showAddClass, setShowAddClass] = useState(false);
+  const [newClassName, setNewClassName] = useState("");
+  const [showAddSubject, setShowAddSubject] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState("");
   const [editingYearId, setEditingYearId] = useState<number | null>(null);
   const [editingTermId, setEditingTermId] = useState<number | null>(null);
   const [editingClassId, setEditingClassId] = useState<number | null>(null);
@@ -149,6 +164,34 @@ function AcademicStructure() {
         fetchYears(); // Refresh the list
       } catch (error) {
         toast.error("Failed to save academic year to MySQL");
+      }
+    }
+  };
+
+  const handleAddSubject = async () => {
+    if (newSubjectName.trim()) {
+      try {
+        await academicApi.addSubject({ name: newSubjectName.trim() });
+        toast.success("Subject added successfully");
+        setNewSubjectName("");
+        setShowAddSubject(false);
+        fetchSubjects();
+      } catch (error) {
+        toast.error("Failed to save subject to database");
+      }
+    }
+  };
+
+  const handleAddClass = async () => {
+    if (newClassName.trim()) {
+      try {
+        await academicApi.addClass(newClassName.trim());
+        toast.success("Class added successfully");
+        setNewClassName("");
+        setShowAddClass(false);
+        fetchClasses();
+      } catch (error) {
+        toast.error("Failed to save class to database");
       }
     }
   };
@@ -319,7 +362,35 @@ function AcademicStructure() {
       </div>
 
       <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-3">Classes</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-medium text-gray-900">Classes</h3>
+          <button onClick={() => setShowAddClass(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <Plus className="h-4 w-4" />
+            Add New Class
+          </button>
+        </div>
+
+        {/* Add New Class Form */}
+        {showAddClass && (
+          <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 mb-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Add New Class</h3>
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
+                <input
+                  type="text"
+                  value={newClassName}
+                  onChange={(e) => setNewClassName(e.target.value)}
+                  placeholder="e.g. Form 1, S1, Primary 1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <button onClick={handleAddClass} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Add</button>
+              <button onClick={() => { setShowAddClass(false); setNewClassName(""); }} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm">Cancel</button>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {classes.map((cls) => (
             <div key={cls.id} className="border border-gray-200 rounded-lg p-4">
@@ -346,6 +417,48 @@ function AcademicStructure() {
           ))}
         </div>
       </div>
+
+      {/* Subjects */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-medium text-gray-900">Subjects</h3>
+          <button onClick={() => setShowAddSubject(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <Plus className="h-4 w-4" />
+            Add New Subject
+          </button>
+        </div>
+
+        {/* Add New Subject Form */}
+        {showAddSubject && (
+          <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 mb-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Add New Subject</h3>
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject Name</label>
+                <input
+                  type="text"
+                  value={newSubjectName}
+                  onChange={(e) => setNewSubjectName(e.target.value)}
+                  placeholder="e.g. Mathematics, Physics, etc."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <button onClick={handleAddSubject} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Add</button>
+              <button onClick={() => { setShowAddSubject(false); setNewSubjectName(""); }} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {subjects.map((sub) => (
+            <div key={sub.id} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-gray-900">{sub.name}</h4>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -365,9 +478,15 @@ function TeacherAssignment() {
   const [newClass, setNewClass] = useState("");
   const [newStream, setNewStream] = useState("");
 
+  const [classesList, setClassesList] = useState<{id: number, name: string}[]>([]);
+  const [subjectsList, setSubjectsList] = useState<{id: number, name: string}[]>([]);
+
+  useEffect(() => {
+    academicApi.getClasses().then(res => setClassesList(res.data)).catch(() => {});
+    academicApi.getSubjects().then(res => setSubjectsList(res.data)).catch(() => {});
+  }, []);
+
   const allTeachers = ["John Mugabo", "Sarah Uwimana", "David Habimana", "Grace Mukamana", "Eric Nshuti", "Jane Mukamana"];
-  const allSubjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "History", "Geography"];
-  const allClasses = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6"];
   const allStreams = ["A", "B", "C"];
 
   const handleAddClass = async () => {
@@ -418,14 +537,14 @@ function TeacherAssignment() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
               <select value={newSubject} onChange={(e) => setNewSubject(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                 <option value="">Select Subject</option>
-                {allSubjects.map((s) => (<option key={s} value={s}>{s}</option>))}
+                {subjectsList.map((s) => (<option key={s.id} value={s.name}>{s.name}</option>))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Class *</label>
               <select value={newClass} onChange={(e) => setNewClass(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                 <option value="">Select Class</option>
-                {allClasses.map((c) => (<option key={c} value={c}>{c}</option>))}
+                {classesList.map((c) => (<option key={c.id} value={c.name}>{c.name}</option>))}
               </select>
             </div>
             <div>
@@ -578,8 +697,8 @@ function MarksManagement() {
       setMarks(res.data.map((s: any) => ({
         id: s.id,
         studentId: s.student_id || s.id,
-        name: s.full_name || s.name,
-        class: s.class_name || s.class || "Unknown",
+        name: s.user?.full_name || s.full_name || s.name || "Unknown",
+        class: s.class_name || s.class?.name || "Unknown",
         cat: 0,
         exam: 0,
         total: 0,
@@ -592,8 +711,14 @@ function MarksManagement() {
   const [editCat, setEditCat] = useState("");
   const [editExam, setEditExam] = useState("");
 
-  const allClasses = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6"];
-  const allSubjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "History", "Geography"];
+  const [classesList, setClassesList] = useState<{id: number, name: string}[]>([]);
+  const [subjectsList, setSubjectsList] = useState<{id: number, name: string}[]>([]);
+
+  useEffect(() => {
+    academicApi.getClasses().then(res => setClassesList(res.data)).catch(() => {});
+    academicApi.getSubjects().then(res => setSubjectsList(res.data)).catch(() => {});
+  }, []);
+
   const allTerms = ["Term 1", "Term 2", "Term 3"];
   const allYears = ["2024-2025", "2025-2026", "2026-2027"];
 
@@ -651,14 +776,14 @@ function MarksManagement() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Class *</label>
               <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                 <option value="">Select Class</option>
-                {allClasses.map((cls) => (<option key={cls} value={cls}>{cls}</option>))}
+                {classesList.map((cls) => (<option key={cls.id} value={cls.name}>{cls.name}</option>))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
               <select value={selectedSubject} onChange={(e) => setSelectedSubject(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                 <option value="">Select Subject</option>
-                {allSubjects.map((sub) => (<option key={sub} value={sub}>{sub}</option>))}
+                {subjectsList.map((sub) => (<option key={sub.id} value={sub.name}>{sub.name}</option>))}
               </select>
             </div>
             <div>
@@ -696,14 +821,14 @@ function MarksManagement() {
           <label className="block text-sm font-medium text-gray-700 mb-2">Class</label>
           <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
             <option value="">Select Class</option>
-            {allClasses.map((cls) => (<option key={cls} value={cls}>{cls}</option>))}
+            {classesList.map((cls) => (<option key={cls.id} value={cls.name}>{cls.name}</option>))}
           </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
           <select value={selectedSubject} onChange={(e) => setSelectedSubject(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
             <option value="">Select Subject</option>
-            {allSubjects.map((sub) => (<option key={sub} value={sub}>{sub}</option>))}
+            {subjectsList.map((sub) => (<option key={sub.id} value={sub.name}>{sub.name}</option>))}
           </select>
         </div>
         <div>

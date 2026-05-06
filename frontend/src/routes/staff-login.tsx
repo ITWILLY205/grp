@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Header } from "@/components/landing/Header";
 import { Footer } from "@/components/landing/Footer";
 import { User, Lock, ArrowRight, Users, Shield } from "lucide-react";
+import { authApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff-login")({
   component: StaffLoginPage,
@@ -16,20 +18,46 @@ export const Route = createFileRoute("/staff-login")({
 
 function StaffLoginPage() {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Simple authentication logic based on name
-    if (name.toLowerCase().includes('admin')) {
-      navigate({ to: "/admin" });
-    } else if (name.toLowerCase().includes('dod')) {
-      navigate({ to: "/discipline-master" });
-    } else {
-      navigate({ to: "/teacher" });
+    setIsLoading(true);
+
+    try {
+      const res = await authApi.login({ username, password });
+      const data = res.data;
+
+      if (data.success && data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        toast.success(`Welcome back, ${data.user.full_name || data.user.username}!`);
+
+        // Route based on role
+        switch (data.user.role) {
+          case 'ADMIN':
+            navigate({ to: "/admin" });
+            break;
+          case 'DISCIPLINE_MASTER':
+            navigate({ to: "/discipline-master" });
+            break;
+          case 'TEACHER':
+            navigate({ to: "/teacher" });
+            break;
+          default:
+            toast.error("Unknown role. Please contact admin.");
+        }
+      } else {
+        toast.error("Login failed");
+      }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      toast.error(err.response?.data?.error || "Invalid credentials");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -53,13 +81,13 @@ function StaffLoginPage() {
               <div>
                 <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                   <User className="w-4 h-4" />
-                  Full Name
+                  Username
                 </label>
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your full name"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
                   required
                   className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
@@ -91,9 +119,10 @@ function StaffLoginPage() {
 
               <button
                 type="submit"
-                className="w-full rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                disabled={isLoading}
+                className={`w-full rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                Sign In
+                {isLoading ? 'Signing In...' : 'Sign In'}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>

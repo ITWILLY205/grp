@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
   LayoutDashboard,
@@ -8,6 +8,7 @@ import {
   BarChart3,
   MessageSquare,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const teacherNav = [
   { icon: LayoutDashboard, label: "Overview", href: "/teacher" },
@@ -23,13 +24,37 @@ export const Route = createFileRoute("/teacher")({
 });
 
 function TeacherLayout() {
+  const navigate = useNavigate();
+  const [userName, setUserName] = useState("Teacher");
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (!token) {
+      navigate({ to: "/staff-login" });
+      return;
+    }
+
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setUserName(user.full_name || user.username || "Teacher");
+        setUserEmail(user.email || user.username || "");
+      } catch {
+        // ignore parse error
+      }
+    }
+  }, [navigate]);
+
   return (
     <DashboardShell
       role="teacher"
       roleLabel="Teacher"
       navItems={teacherNav}
-      userName="Sarah Chen"
-      userEmail="schen@sms.com"
+      userName={userName}
+      userEmail={userEmail}
     >
       <Outlet />
     </DashboardShell>

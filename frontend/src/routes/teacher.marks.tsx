@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/dashboard/SharedUI";
 import { useState } from "react";
 import { Save, Search, Calendar, GraduationCap, FileText, Calculator, Play, BookOpen } from "lucide-react";
-import { getTeacherSubjects } from "@/lib/teacherStore";
 import { getActiveTerm } from "@/lib/termStore";
 import { logMarksEntry, logMarksUpdate, getLogsByModule } from "@/utils/auditLog";
 import { academicApi, peopleApi, recordApi } from "@/lib/api";
@@ -17,7 +16,6 @@ export const Route = createFileRoute("/teacher/marks")({
 const classStudents: any = {};
 
 const testTypes = ["Test", "Quiz", "Exam", "Assignment", "Practical", "Project"];
-const teacherSubjects = getTeacherSubjects();
 
 function TeacherMarks() {
   const activeTerm = getActiveTerm();
@@ -33,10 +31,12 @@ function TeacherMarks() {
   const [showStudents, setShowStudents] = useState(false);
   const [classesList, setClassesList] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  const [mySubjects, setMySubjects] = useState<{id: number, name: string}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchClasses();
+    fetchMySubjects();
   }, []);
 
   const fetchClasses = async () => {
@@ -48,11 +48,27 @@ function TeacherMarks() {
     }
   };
 
+  const fetchMySubjects = async () => {
+    try {
+      const response = await peopleApi.getTeacherMe();
+      const assignments = response.data.assignments || [];
+      const uniqueSubjects = new Map();
+      assignments.forEach((a: any) => {
+        if (a.subject && !uniqueSubjects.has(a.subject.id)) {
+          uniqueSubjects.set(a.subject.id, { id: a.subject.id, name: a.subject.name });
+        }
+      });
+      setMySubjects(Array.from(uniqueSubjects.values()));
+    } catch (error) {
+      toast.error("Failed to load your subjects");
+    }
+  };
+
   const fetchStudentsByClass = async (className: string) => {
     try {
       const response = await peopleApi.getStudents();
       // Filter by class name
-      const filtered = response.data.filter((s: any) => (s.class_name || s.class) === className);
+      const filtered = response.data.filter((s: any) => (s.class_name || s.class?.name) === className);
       setStudents(filtered);
     } catch (error) {
       toast.error("Failed to load students for this class");
@@ -102,12 +118,9 @@ function TeacherMarks() {
     setIsLoading(true);
     try {
       // Create entries for each mark entered
-      // Map subject name to an ID matching our seeded database
-      const subjectMap: Record<string, number> = {
-        "Mathematics": 1,
-        "Physics": 2,
-        "Chemistry": 3
-      };
+      // Map subject name to an ID from fetched subjects
+      const subjectMap: Record<string, number> = {};
+      mySubjects.forEach(s => { subjectMap[s.name] = s.id; });
       
       const savePromises = Object.entries(studentMarks).map(([studentId, marks]) => {
         return recordApi.saveMarks({
@@ -220,8 +233,8 @@ function TeacherMarks() {
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">-- Select Subject --</option>
-                  {teacherSubjects.map((subject) => (
-                    <option key={subject} value={subject}>{subject}</option>
+                  {mySubjects.map((subject) => (
+                    <option key={subject.id} value={subject.name}>{subject.name}</option>
                   ))}
                 </select>
               </div>

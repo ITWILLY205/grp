@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Search, Plus, Upload, Download, Filter, User, Eye, Edit, Trash2, MoreVertical, ChevronDown, FileText, Mail, Phone, Shield, Key, Ban } from "lucide-react";
 import { logCreateStudent, logDeleteStudent, logUpdateStudent } from "@/utils/auditLog";
-import { peopleApi } from "@/lib/api";
+import { peopleApi, academicApi } from "@/lib/api";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
@@ -23,7 +23,9 @@ interface Student {
   parent_phone?: string;
   email: string;
   phone: string;
-  class: string;
+  class: { id: number; name: string } | null;
+  stream: { id: number; name: string } | null;
+  user: { id: number; full_name: string | null; email: string | null; created_at: string };
   gender: string;
   status: string;
   combination?: string;
@@ -70,15 +72,26 @@ export function AdminStudents() {
   const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login first');
+      navigate({ to: '/login-staff' });
+      return;
+    }
     fetchStudents();
   }, []);
 
   const fetchStudents = async () => {
     try {
       const response = await peopleApi.getStudents();
+      console.log('Students API response:', response.data);
       setStudentsData(response.data);
-    } catch (error) {
-      toast.error("Failed to load students from database");
+    } catch (error: any) {
+      console.error('Students API error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Error message:', error.message);
+      toast.error(`Failed to load students: ${error.response?.data?.error || error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -93,17 +106,25 @@ export function AdminStudents() {
   const [filterGender, setFilterGender] = useState("");
   const [filterAcademicYear, setFilterAcademicYear] = useState("");
 
-  const classes = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6"];
+  const [classesList, setClassesList] = useState<{id: number, name: string}[]>([]);
+
+  useEffect(() => {
+    academicApi.getClasses().then(res => setClassesList(res.data)).catch(() => {});
+  }, []);
+
   const combinations = ["O Level", "PCM", "PCB", "HGL", "HGE", "EGM", "MCB", "MEC", "LKW"];
   const statuses = ["Active", "Suspended", "Graduated", "Transferred"];
   const genders = ["Male", "Female"];
   const academicYears = ["2024-2025", "2025-2026", "2026-2027"];
 
   const filteredStudents = studentsData.filter((student) => {
+    const searchName = student.user?.full_name || student.name || "";
+    const searchId = student.student_id || student.indexNumber || "";
+    const className = student.class?.name || "";
     const matchesSearch = searchTerm === "" ||
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.indexNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesClass = filterClass === "" || student.class === filterClass;
+      searchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      searchId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesClass = filterClass === "" || className === filterClass;
     const matchesCombination = filterCombination === "" || student.combination === filterCombination;
     const matchesStatus = filterStatus === "" || student.status === filterStatus;
     const matchesGender = filterGender === "" || student.gender === filterGender;
@@ -121,8 +142,10 @@ export function AdminStudents() {
   };
 
   const handleDelete = (student: Student) => {
-    if (confirm(`Are you sure you want to delete ${student.name}?`)) {
-      logDeleteStudent("Admin User", "admin", student.name, student.indexNumber);
+    const name = student.user?.full_name || student.name || "Unknown";
+    const id = student.student_id || student.indexNumber || "N/A";
+    if (confirm(`Are you sure you want to delete ${name}?`)) {
+      logDeleteStudent("Admin User", "admin", name, id);
       alert("Student deleted successfully");
     }
   };
@@ -133,6 +156,7 @@ export function AdminStudents() {
 
   const handleAction = (action: string, student: Student) => {
     setActiveDropdown(null);
+    const name = student.user?.full_name || student.name || "Unknown";
     switch (action) {
       case "view":
         handleViewProfile(student);
@@ -142,19 +166,19 @@ export function AdminStudents() {
         setSelectedStudent(student);
         break;
       case "promote":
-        alert(`Promoting ${student.name} to next class`);
+        alert(`Promoting ${name} to next class`);
         break;
       case "assign":
-        alert(`Assigning ${student.name} to a class`);
+        alert(`Assigning ${name} to a class`);
         break;
       case "academic":
-        alert(`Viewing academic records for ${student.name}`);
+        alert(`Viewing academic records for ${name}`);
         break;
       case "attendance":
-        alert(`Viewing attendance for ${student.name}`);
+        alert(`Viewing attendance for ${name}`);
         break;
       case "suspend":
-        alert(`${student.status === "Active" ? "Suspending" : "Activating"} ${student.name}`);
+        alert(`${student.status === "Active" ? "Suspending" : "Activating"} ${name}`);
         break;
       case "delete":
         handleDelete(student);
@@ -228,8 +252,8 @@ export function AdminStudents() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Classes</option>
-                    {classes.map((cls) => (
-                      <option key={cls} value={cls}>{cls}</option>
+                    {classesList.map((cls) => (
+                      <option key={cls.id} value={cls.name}>{cls.name}</option>
                     ))}
                   </select>
                 </div>
@@ -312,25 +336,25 @@ export function AdminStudents() {
                             <User className="h-5 w-5 text-gray-400" />
                           </div>
                           <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900">{student.full_name || student.name}</p>
+                            <p className="text-sm font-medium text-gray-900">{student.user?.full_name || student.full_name || student.name || "Unknown"}</p>
                             <p className="text-xs text-gray-500">{student.gender || "Unknown"}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-sm text-gray-900">{student.student_id || student.indexNumber}</p>
+                        <p className="text-sm text-gray-900">{student.student_id || student.indexNumber || "N/A"}</p>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-sm text-gray-900">{student.class_name || student.class}</p>
-                        <p className="text-xs text-gray-500">{student.combination || "General"}</p>
+                        <p className="text-sm text-gray-900">{student.class?.name || student.class_name || "N/A"}</p>
+                        <p className="text-xs text-gray-500">{student.stream?.name || student.combination || "General"}</p>
                       </td>
                       <td className="px-4 py-4">
                         <p className="text-sm text-gray-900">{student.parent_name || student.fatherName || "N/A"}</p>
                         <p className="text-xs text-gray-500">{student.motherName || ""}</p>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-sm text-gray-900">{student.parent_phone || student.phone}</p>
-                        <p className="text-xs text-gray-500">{student.email}</p>
+                        <p className="text-sm text-gray-900">{student.parent_phone || student.phone || "N/A"}</p>
+                        <p className="text-xs text-gray-500">{student.user?.email || student.email || ""}</p>
                       </td>
                       <td className="px-4 py-4">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -521,7 +545,7 @@ function AddStudentForm({ onBack, editStudent }: { onBack: () => void; editStude
     name: editStudent?.name || "",
     gender: editStudent?.gender || "",
     dob: editStudent?.dob || "",
-    class: editStudent?.class || "",
+    class: editStudent?.class?.name || "",
     combination: editStudent?.combination || "",
     admissionDate: editStudent?.admissionDate || "",
     status: editStudent?.status || "Active",
@@ -554,13 +578,18 @@ function AddStudentForm({ onBack, editStudent }: { onBack: () => void; editStude
     academicYear: editStudent?.academicYear || "2024-2025",
   });
 
-  const classes = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6"];
+  const [classesList, setClassesList] = useState<{id: number, name: string}[]>([]);
+
+  useEffect(() => {
+    academicApi.getClasses().then(res => setClassesList(res.data)).catch(() => {});
+  }, []);
+
   const combinations = ["O Level", "PCM", "PCB", "HGL", "HGE", "EGM", "MCB", "MEC", "LKW"];
   const statuses = ["Active", "Inactive", "Graduated"];
 
   const handleSubmit = () => {
     if (isEdit && editStudent) {
-      const oldValues = { name: editStudent.name, class: editStudent.class, combination: editStudent.combination, status: editStudent.status, email: editStudent.email, phone: editStudent.phone };
+      const oldValues = { name: editStudent.name, class: editStudent.class?.name || "", combination: editStudent.combination, status: editStudent.status, email: editStudent.email, phone: editStudent.phone };
       const newValues = { name: formData.name, class: formData.class, combination: formData.combination, status: formData.status, email: formData.email, phone: formData.phone };
       logUpdateStudent("Admin User", "admin", editStudent.name, editStudent.indexNumber, oldValues, newValues);
       alert("Student updated successfully");
@@ -718,8 +747,8 @@ function AddStudentForm({ onBack, editStudent }: { onBack: () => void; editStude
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
               <option value="">Select Class</option>
-              {classes.map((cls) => (
-                <option key={cls} value={cls}>{cls}</option>
+              {classesList.map((cls) => (
+                <option key={cls.id} value={cls.name}>{cls.name}</option>
               ))}
             </select>
           </div>
@@ -974,20 +1003,20 @@ function StudentProfile({ student, onBack, onEdit, onEditAcademic, onEditAttenda
                 student.status === "Active" ? "bg-green-500" : "bg-red-500"
               }`} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">{student.name}</h2>
-            <p className="text-gray-500 font-medium mb-4">{student.indexNumber}</p>
+            <h2 className="text-2xl font-bold text-gray-900">{student.user?.full_name || student.name || "Unknown"}</h2>
+            <p className="text-gray-500 font-medium mb-4">{student.student_id || student.indexNumber || "N/A"}</p>
             <div className="flex justify-center gap-2 mb-6">
                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold uppercase">{student.status}</span>
-               <span className="px-3 py-1 bg-gray-50 text-gray-600 rounded-full text-[10px] font-bold uppercase">{student.class}</span>
+               <span className="px-3 py-1 bg-gray-50 text-gray-600 rounded-full text-[10px] font-bold uppercase">{student.class?.name || "N/A"}</span>
             </div>
             <div className="flex flex-col gap-3 text-left border-t border-gray-100 pt-6">
                 <div className="flex items-center gap-3 text-sm">
                    <Mail className="h-4 w-4 text-gray-400" />
-                   <span className="text-gray-600">{student.email}</span>
+                   <span className="text-gray-600">{student.user?.email || student.email || "N/A"}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                    <Phone className="h-4 w-4 text-gray-400" />
-                   <span className="text-gray-600">{student.phone}</span>
+                   <span className="text-gray-600">{student.parent_phone || student.phone || "N/A"}</span>
                 </div>
             </div>
           </div>
@@ -1096,21 +1125,26 @@ function StudentProfile({ student, onBack, onEdit, onEditAcademic, onEditAttenda
 
 function EditAcademicForm({ student, onBack }: { student: Student; onBack: () => void }) {
   const [formData, setFormData] = useState({
-    class: student.class,
+    class: student.class?.name || "",
     combination: student.combination,
     academicYear: student.academicYear,
     admissionDate: student.admissionDate,
     status: student.status,
-    disciplineMarks: student.disciplineMarks.toString(),
+    disciplineMarks: (student.disciplineMarks || 0).toString(),
   });
 
-  const classes = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6"];
+  const [classesList, setClassesList] = useState<{id: number, name: string}[]>([]);
+
+  useEffect(() => {
+    academicApi.getClasses().then(res => setClassesList(res.data)).catch(() => {});
+  }, []);
+
   const combinations = ["O Level", "PCM", "PCB", "HGL", "HGE", "EGM", "MCB", "MEC", "LKW"];
   const statuses = ["Active", "Inactive", "Graduated", "Suspended", "Transferred"];
 
   const handleSave = () => {
     logUpdateStudent("Admin User", "admin", student.name, student.indexNumber,
-      { class: student.class, combination: student.combination, academicYear: student.academicYear, status: student.status },
+      { class: student.class?.name || "", combination: student.combination, academicYear: student.academicYear, status: student.status },
       { class: formData.class, combination: formData.combination, academicYear: formData.academicYear, status: formData.status }
     );
     alert("Academic information updated successfully");
@@ -1121,7 +1155,7 @@ function EditAcademicForm({ student, onBack }: { student: Student; onBack: () =>
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <h2 className="text-xl font-bold text-gray-900 mb-6">Edit Academic Information</h2>
       <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-        <p className="text-sm text-blue-800"><strong>Student:</strong> {student.name} ({student.indexNumber})</p>
+        <p className="text-sm text-blue-800"><strong>Student:</strong> {student.user?.full_name || student.name || "Unknown"} ({student.student_id || student.indexNumber || "N/A"})</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div>
@@ -1281,7 +1315,7 @@ function EditAttendanceForm({ student, onBack }: { student: Student; onBack: () 
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <h2 className="text-xl font-bold text-gray-900 mb-6">Edit Attendance Records</h2>
       <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-        <p className="text-sm text-blue-800"><strong>Student:</strong> {student.name} ({student.indexNumber}) — {student.class}</p>
+        <p className="text-sm text-blue-800"><strong>Student:</strong> {student.user?.full_name || student.name || "Unknown"} ({student.student_id || student.indexNumber || "N/A"}) — {student.class?.name || "N/A"}</p>
       </div>
 
       {/* Filter & Sort Controls */}

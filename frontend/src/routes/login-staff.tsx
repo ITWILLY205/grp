@@ -2,9 +2,6 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { GraduationCap, Eye, EyeOff, ArrowRight, Shield } from "lucide-react";
 import { motion } from "framer-motion";
-import { logLogin, logFailedLogin } from "@/utils/auditLog";
-import { loadSettings } from "@/lib/settingsStore";
-import { useEffect } from "react";
 import { authApi } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -35,6 +32,8 @@ function StaffLoginPage() {
       const { success, user, message } = response.data;
 
       if (success) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(user));
         toast.success(`Welcome back, ${user.full_name}!`);
         // Navigate based on role
         if (user.role === "ADMIN") navigate({ to: "/admin" });
@@ -45,22 +44,15 @@ function StaffLoginPage() {
         setLoginError(message || "Invalid credentials");
       }
     } catch (error: any) {
-      setLoginError(error.response?.data?.message || "Failed to connect to backend server");
+      console.error('Login error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Error message:', error.message);
+      const msg = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to connect to backend server";
+      setLoginError(msg);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDemoLogin = (role: string) => {
-    const settings = loadSettings();
-    const normalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
-    
-    if (role === "teacher" && (settings.system.systemClosed || settings.blockedRoles.includes("Teacher"))) {
-      setLoginError("Teacher portal is currently closed or restricted.");
-      return;
-    }
-
-    navigate({ to: `/${role}` as "/" });
   };
 
   return (
@@ -156,14 +148,6 @@ function StaffLoginPage() {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-border">
-            <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground text-center">
-              Quick Demo Access (Dev Only)
-            </p>
-            <div className="grid grid-cols-1 gap-3">
-              <button onClick={() => handleDemoLogin("teacher")} className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-surface text-center">Teacher</button>
-            </div>
-          </div>
         </motion.div>
       </div>
     </div>
