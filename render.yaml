@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: school-backend
+    runtime: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend && npm install && npx prisma generate && npm run build
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        sync: false  # Set this in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+    healthCheckPath: /api/health
