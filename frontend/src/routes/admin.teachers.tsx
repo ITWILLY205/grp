@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Search, Plus, Upload, Download, Filter, User, Eye, Edit, Trash2, MoreVertical, ChevronDown, Mail, Phone, Calendar, BookOpen, AlertTriangle } from "lucide-react";
-import { peopleApi } from "@/lib/api";
+import { Search, Plus, Upload, Download, Filter, User, Eye, Edit, Trash2, MoreVertical, ChevronDown, Mail, Phone, Calendar, BookOpen, AlertTriangle, Loader2 } from "lucide-react";
+import { peopleApi, academicApi } from "@/lib/api";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/teachers")({
@@ -40,6 +40,40 @@ interface Teacher {
   contractType: string;
 }
 
+function mapApiTeacherToTeacher(apiTeacher: any): Teacher {
+  return {
+    id: apiTeacher.id,
+    indexNumber: apiTeacher.staff_id || "",
+    name: apiTeacher.user?.full_name || "",
+    gender: "",
+    dob: "",
+    email: apiTeacher.user?.email || "",
+    phone: "",
+    nationalId: "",
+    address: "",
+    city: "",
+    district: "",
+    nationality: "",
+    religion: "",
+    bloodGroup: "",
+    qualification: "",
+    department: "",
+    specialization: apiTeacher.specialization || "",
+    employmentDate: "",
+    status: "Active",
+    subjects: Array.from(new Set((apiTeacher.assignments || []).map((a: any) => a.subject?.name).filter(Boolean))),
+    classes: Array.from(new Set((apiTeacher.assignments || []).map((a: any) => a.stream?.class?.name).filter(Boolean))),
+    emergencyContact: "",
+    emergencyPhone: "",
+    bankAccount: "",
+    bankName: "",
+    tinNumber: "",
+    nssfNumber: "",
+    salary: 0,
+    contractType: "Permanent"
+  };
+}
+
 
 export function AdminTeachers() {
   const navigate = useNavigate();
@@ -66,37 +100,7 @@ export function AdminTeachers() {
       setIsLoading(true);
       try {
         const response = await peopleApi.getTeachers();
-        const mappedTeachers = response.data.map((apiTeacher: any) => ({
-          id: apiTeacher.id,
-          indexNumber: apiTeacher.staff_id || "",
-          name: apiTeacher.user?.full_name || "",
-          gender: "",
-          dob: "",
-          email: apiTeacher.user?.email || "",
-          phone: "",
-          nationalId: "",
-          address: "",
-          city: "",
-          district: "",
-          nationality: "",
-          religion: "",
-          bloodGroup: "",
-          qualification: "",
-          department: "",
-          specialization: apiTeacher.specialization || "",
-          employmentDate: "",
-          status: "Active",
-          subjects: Array.from(new Set((apiTeacher.assignments || []).map((a: any) => a.subject?.name).filter(Boolean))),
-          classes: Array.from(new Set((apiTeacher.assignments || []).map((a: any) => a.stream?.class?.name).filter(Boolean))),
-          emergencyContact: "",
-          emergencyPhone: "",
-          bankAccount: "",
-          bankName: "",
-          tinNumber: "",
-          nssfNumber: "",
-          salary: 0,
-          contractType: "Permanent"
-        }));
+        const mappedTeachers = response.data.map(mapApiTeacherToTeacher);
         setTeachers(mappedTeachers);
       } catch (error) {
         toast.error("Failed to load teachers");
@@ -1567,9 +1571,29 @@ function TeacherProfile({ teacher, onBack, onEdit, onAssign, onResetPassword, on
 function AssignClasses({ teacher, onBack, setTeachers }: { teacher: Teacher; onBack: () => void; setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>; }) {
   const [selectedSubjects, setSelectedSubjects] = useState(teacher.subjects);
   const [selectedClasses, setSelectedClasses] = useState(teacher.classes);
+  const [availableSubjects, setAvailableSubjects] = useState<{id: number, name: string}[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<{id: number, name: string}[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const availableSubjects = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Literature", "History", "Geography"];
-  const availableClasses = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6"];
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [subjectsRes, classesRes] = await Promise.all([
+          academicApi.getSubjects(),
+          academicApi.getClasses(),
+        ]);
+        setAvailableSubjects(subjectsRes.data || []);
+        setAvailableClasses(classesRes.data || []);
+      } catch (err) {
+        toast.error("Failed to load subjects and classes");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleSubjectToggle = (subject: string) => {
     setSelectedSubjects(prev =>
@@ -1587,22 +1611,46 @@ function AssignClasses({ teacher, onBack, setTeachers }: { teacher: Teacher; onB
     );
   };
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (selectedSubjects.length === 0 || selectedClasses.length === 0) {
-      alert("Please select at least one subject and one class");
+      toast.error("Please select at least one subject and one class");
       return;
     }
 
-    setTeachers(prev => prev.map(t => t.id === teacher.id ? { ...t, subjects: selectedSubjects, classes: selectedClasses } : t));
-    alert(`Classes assigned successfully!\n\nSubjects: ${selectedSubjects.join(", ")}\nClasses: ${selectedClasses.join(", ")}`);
-    onBack();
+    setIsSaving(true);
+    try {
+      await peopleApi.assignClasses(teacher.id, {
+        subjects: selectedSubjects,
+        classes: selectedClasses,
+      });
+
+      // Re-fetch teachers to get updated assignments from database
+      const response = await peopleApi.getTeachers();
+      const mappedTeachers = response.data.map(mapApiTeacherToTeacher);
+      setTeachers(mappedTeachers);
+
+      toast.success(`Classes assigned successfully for ${teacher.name}!`);
+      onBack();
+    } catch (error) {
+      toast.error("Failed to save assignment. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm flex items-center justify-center gap-3">
+        <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+        <span className="text-gray-600">Loading subjects and classes...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
       <h3 className="text-xl font-semibold text-gray-900 mb-4">Assign Classes & Subjects</h3>
 
-      
       <div className="mb-6 p-4 bg-blue-50 rounded-lg">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
@@ -1620,18 +1668,21 @@ function AssignClasses({ teacher, onBack, setTeachers }: { teacher: Teacher; onB
         <div className="grid grid-cols-2 gap-2">
           {availableSubjects.map((subject) => (
             <button
-              key={subject}
-              onClick={() => handleSubjectToggle(subject)}
+              key={subject.id}
+              onClick={() => handleSubjectToggle(subject.name)}
               className={`px-3 py-2 rounded text-sm ${
-                selectedSubjects.includes(subject)
+                selectedSubjects.includes(subject.name)
                   ? "bg-blue-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              {subject}
+              {subject.name}
             </button>
           ))}
         </div>
+        {availableSubjects.length === 0 && (
+          <p className="text-sm text-gray-500 mt-2">No subjects available. Add subjects in Academic Structure first.</p>
+        )}
       </div>
 
       <div className="mb-6">
@@ -1639,30 +1690,39 @@ function AssignClasses({ teacher, onBack, setTeachers }: { teacher: Teacher; onB
         <div className="grid grid-cols-2 gap-2">
           {availableClasses.map((cls) => (
             <button
-              key={cls}
-              onClick={() => handleClassToggle(cls)}
+              key={cls.id}
+              onClick={() => handleClassToggle(cls.name)}
               className={`px-3 py-2 rounded text-sm ${
-                selectedClasses.includes(cls)
+                selectedClasses.includes(cls.name)
                   ? "bg-green-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              {cls}
+              {cls.name}
             </button>
           ))}
         </div>
+        {availableClasses.length === 0 && (
+          <p className="text-sm text-gray-500 mt-2">No classes available. Add classes in Academic Structure first.</p>
+        )}
       </div>
 
       <div className="flex gap-3">
         <button
           onClick={handleAssign}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          disabled={isSaving}
+          className={`px-4 py-2 rounded-lg ${
+            isSaving
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
         >
-          Confirm Assignment
+          {isSaving ? "Saving..." : "Confirm Assignment"}
         </button>
         <button
           onClick={onBack}
-          className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          disabled={isSaving}
+          className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
         >
           Cancel
         </button>
