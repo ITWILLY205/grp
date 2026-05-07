@@ -9,7 +9,17 @@ const router = Router();
 // Get all students with related data
 router.get('/', authenticate, async (req, res) => {
   try {
+    const className = req.query.class_name as string | undefined;
+
+    const where: any = {};
+    if (className) {
+      where.class = {
+        name: className,
+      };
+    }
+
     const students = await prisma.student.findMany({
+      where,
       include: {
         user: {
           select: {

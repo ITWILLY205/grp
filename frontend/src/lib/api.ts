@@ -52,7 +52,7 @@ export const peopleApi = {
   assignClasses: (teacherId: number, data: { subjects: string[], classes: string[], streams?: number[] }) => api.post(`/teachers/${teacherId}/assignments`, data),
 
   // Students
-  getStudents: () => api.get('/students'),
+  getStudents: (className?: string) => api.get('/students', { params: className ? { class_name: className } : undefined }),
   addStudent: (data: any) => api.post('/students', data),
 };
 
