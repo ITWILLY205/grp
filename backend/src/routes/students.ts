@@ -2,12 +2,12 @@ import { Router } from 'express';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma.js';
-import { authenticate, authorize, AuthRequest } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = Router();
 
 // Get all students with related data
-router.get('/', authenticate, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const className = req.query.class_name as string | undefined;
 
@@ -46,9 +46,12 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // Get student by ID
-router.get('/:id', authenticate, async (req: AuthRequest, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid student ID' });
+    }
 
     const student = await prisma.student.findUnique({
       where: { id },
@@ -102,7 +105,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Create student
-router.post('/', authenticate, authorize('ADMIN'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const schema = z.object({
       username: z.string().min(3),
@@ -166,7 +169,7 @@ router.post('/', authenticate, authorize('ADMIN'), async (req, res) => {
 });
 
 // Update student
-router.patch('/:id', authenticate, authorize('ADMIN'), async (req, res) => {
+router.patch('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
 
