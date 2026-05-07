@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
   LayoutDashboard,
@@ -29,6 +29,30 @@ const adminNav = [
 ];
 
 export const Route = createFileRoute("/admin")({
+  beforeLoad: ({ location }) => {
+    const userJson = localStorage.getItem("user");
+    const token = localStorage.getItem("token");
+    
+    if (!token || !userJson) {
+      throw redirect({
+        to: "/login-staff",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+
+    try {
+      const user = JSON.parse(userJson);
+      if (user.role !== "ADMIN") {
+        throw redirect({ to: "/" });
+      }
+    } catch (e) {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      throw redirect({ to: "/login-staff" });
+    }
+  },
   component: AdminLayout,
 });
 
@@ -65,13 +89,16 @@ function AdminLayout() {
     return () => clearInterval(interval);
   }, [getOverduePermissions, markAsNotified]);
 
+  const userJson = localStorage.getItem("user");
+  const user = userJson ? JSON.parse(userJson) : { full_name: "Admin", email: "admin@sms.com" };
+
   return (
     <DashboardShell
       role="admin"
       roleLabel="Administrator"
       navItems={adminNav}
-      userName="James Wilson"
-      userEmail="admin@sms.com"
+      userName={user.full_name}
+      userEmail={user.email || "admin@sms.com"}
     >
       <Outlet />
     </DashboardShell>

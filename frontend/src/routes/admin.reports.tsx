@@ -139,19 +139,11 @@ function AttendanceReports() {
             </tr>
           </thead>
           <tbody>
-            {["John Smith", "Mary Johnson", "James Wilson", "Sarah Brown", "Michael Davis"].map((name, idx) => (
-              <tr key={idx} className="border-t border-gray-200">
-                <td className="px-4 py-3 text-sm text-gray-900">{name}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    idx < 2 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                  }`}>
-                    {idx < 2 ? "Present" : "Absent"}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{idx < 2 ? `8:${5 + idx * 5} AM` : "-"}</td>
-              </tr>
-            ))}
+            <tr>
+              <td colSpan={3} className="px-4 py-8 text-sm text-gray-500 text-center">
+                No attendance data available. Data will appear after attendance is recorded.
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -275,18 +267,11 @@ function AcademicReports() {
             </tr>
           </thead>
           <tbody>
-            {[
-              { subject: "Mathematics", average: "B+", passRate: "88%" },
-              { subject: "English", average: "A-", passRate: "92%" },
-              { subject: "Science", average: "B", passRate: "85%" },
-              { subject: "History", average: "B+", passRate: "90%" },
-            ].map((subj, idx) => (
-              <tr key={idx} className="border-t border-gray-200">
-                <td className="px-4 py-3 text-sm text-gray-900">{subj.subject}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{subj.average}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{subj.passRate}</td>
-              </tr>
-            ))}
+            <tr>
+              <td colSpan={3} className="px-4 py-8 text-sm text-gray-500 text-center">
+                No performance data available. Data will appear after marks are entered.
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

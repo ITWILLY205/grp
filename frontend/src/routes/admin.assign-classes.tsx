@@ -1,52 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, BookOpen, Users } from "lucide-react";
-
-// Import the same teachers data
-const teachersData = [
-  { 
-    id: 1, 
-    indexNumber: "TCH-001", 
-    name: "John Mugabo", 
-    department: "Science",
-    subjects: ["Mathematics", "Physics"],
-    classes: ["Form 3", "Form 4"],
-  },
-  { 
-    id: 2, 
-    indexNumber: "TCH-002", 
-    name: "Sarah Uwimana", 
-    department: "Science",
-    subjects: ["Chemistry", "Biology"],
-    classes: ["Form 2", "Form 3"],
-  },
-  { 
-    id: 3, 
-    indexNumber: "TCH-003", 
-    name: "David Habimana", 
-    department: "Languages",
-    subjects: ["English", "Literature"],
-    classes: ["Form 1", "Form 2"],
-  },
-  { 
-    id: 4, 
-    indexNumber: "TCH-004", 
-    name: "Grace Mukamana", 
-    department: "Social Studies",
-    subjects: ["History", "Geography"],
-    classes: ["Form 4", "Form 5"],
-  },
-];
-
-const availableSubjects = [
-  "Mathematics", "Physics", "Chemistry", "Biology", "English", "Literature",
-  "History", "Geography", "Kinyarwanda", "French", "Computer Science"
-];
-
-const availableClasses = [
-  "Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6"
-];
+import { ArrowLeft, BookOpen, Users, Loader2, Search, User } from "lucide-react";
+import { peopleApi, academicApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/assign-classes")({
   component: AssignClasses,
@@ -54,59 +11,100 @@ export const Route = createFileRoute("/admin/assign-classes")({
 
 function AssignClasses() {
   const navigate = useNavigate();
-  const urlParams = new URLSearchParams(window.location.search);
-  const teacherId = parseInt(urlParams.get('id') || '1');
-  
-  const teacher = teachersData.find(t => t.id === teacherId);
-  const [selectedSubjects, setSelectedSubjects] = useState(teacher?.subjects || []);
-  const [selectedClasses, setSelectedClasses] = useState(teacher?.classes || []);
-  
-  if (!teacher) {
+
+  const [teacher, setTeacher] = useState<any>(null);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [teacherSearch, setTeacherSearch] = useState("");
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [teachersRes, subjectsRes, classesRes] = await Promise.all([
+        peopleApi.getTeachers(),
+        academicApi.getSubjects(),
+        academicApi.getClasses(),
+      ]);
+      setTeachers(teachersRes.data || []);
+      setSubjects(subjectsRes.data || []);
+      setClasses(classesRes.data || []);
+    } catch (err: any) {
+      toast.error("Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectTeacher = (selectedTeacher: any) => {
+    setTeacher(selectedTeacher);
+    const assignments = selectedTeacher.assignments || [];
+    const currentSubjects = [...new Set(assignments.map((a: any) => a.subject?.name).filter(Boolean))] as string[];
+    const currentClasses = [...new Set(assignments.map((a: any) => a.stream?.class?.name || a.class?.name).filter(Boolean))] as string[];
+    setSelectedSubjects(currentSubjects.length ? currentSubjects : []);
+    setSelectedClasses(currentClasses.length ? currentClasses : []);
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Teacher Not Found</h2>
-          <p className="text-gray-600 mb-6">The teacher you're looking for doesn't exist.</p>
-          <button
-            onClick={() => navigate({ to: "/admin/teachers" })}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Back to Teachers
-          </button>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-600">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="text-lg">Loading teacher...</span>
         </div>
       </div>
     );
   }
 
+  const filteredTeachers = teachers.filter(t => {
+    const name = t.user?.full_name || t.name || "";
+    return name.toLowerCase().includes(teacherSearch.toLowerCase());
+  });
+
+  const teacherName = teacher?.user?.full_name || "Teacher";
+  const initials = teacherName !== "Teacher" ? teacherName.charAt(0) : "T";
+  const staffId = teacher?.staff_id || (teacher?.id ? `TCH-${teacher.id}` : "—");
+  const department = teacher?.department || "—";
+
   const handleSubjectToggle = (subject: string) => {
-    setSelectedSubjects(prev => 
-      prev.includes(subject) 
+    setSelectedSubjects(prev =>
+      prev.includes(subject)
         ? prev.filter(s => s !== subject)
         : [...prev, subject]
     );
   };
 
   const handleClassToggle = (cls: string) => {
-    setSelectedClasses(prev => 
-      prev.includes(cls) 
+    setSelectedClasses(prev =>
+      prev.includes(cls)
         ? prev.filter(c => c !== cls)
         : [...prev, cls]
     );
   };
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (selectedSubjects.length === 0 || selectedClasses.length === 0) {
-      alert("Please select at least one subject and one class");
+      toast.error("Please select at least one subject and one class");
       return;
     }
-    
-    // Update teacher data
-    const index = teachersData.findIndex(t => t.id === teacher.id);
-    if (index > -1) {
-      teachersData[index].subjects = selectedSubjects;
-      teachersData[index].classes = selectedClasses;
-      alert(`Classes assigned successfully!\n\nSubjects: ${selectedSubjects.join(", ")}\nClasses: ${selectedClasses.join(", ")}`);
-      navigate({ to: "/admin/teachers" });
+    try {
+      await peopleApi.assignClasses(teacher.id, {
+        subjects: selectedSubjects,
+        classes: selectedClasses,
+      });
+      toast.success(`Assignment saved successfully for ${teacherName}!`);
+      setTimeout(() => {
+        navigate({ to: "/admin/teachers" });
+      }, 1500);
+    } catch (error) {
+      toast.error("Failed to save assignment. Please try again.");
     }
   };
 
@@ -122,113 +120,182 @@ function AssignClasses() {
             Back to Teachers
           </button>
           <h1 className="text-3xl font-bold text-gray-900">Assign Classes & Subjects</h1>
-          <p className="text-gray-600 mt-2">Update teaching assignments for {teacher.name}</p>
+          <p className="text-gray-600 mt-2">Select a teacher to assign classes and subjects</p>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          {/* Teacher Information */}
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
-                {teacher.name.charAt(0)}
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">{teacher.name}</h3>
-                <p className="text-sm text-gray-600">{teacher.indexNumber} • {teacher.department}</p>
-                <div className="flex gap-4 mt-2">
-                  <div className="text-sm">
-                    <span className="text-gray-500">Current Subjects:</span>
-                    <span className="ml-2 font-medium">{teacher.subjects.join(", ")}</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-500">Current Classes:</span>
-                    <span className="ml-2 font-medium">{teacher.classes.join(", ")}</span>
-                  </div>
+          {/* Teacher Search */}
+          {!teacher && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-600" />
+                Search Teacher
+              </h3>
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={teacherSearch}
+                    onChange={(e) => setTeacherSearch(e.target.value)}
+                    placeholder="Search teachers by name..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Subjects Selection */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-blue-600" />
-              Select Subjects to Teach
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {availableSubjects.map((subject) => (
-                <button
-                  key={subject}
-                  onClick={() => handleSubjectToggle(subject)}
-                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    selectedSubjects.includes(subject)
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {subject}
-                </button>
-              ))}
-            </div>
-            {selectedSubjects.length > 0 && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  <strong>Selected Subjects:</strong> {selectedSubjects.join(", ")}
-                </p>
+              <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
+                {filteredTeachers.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => handleSelectTeacher(t)}
+                    className="flex items-center gap-4 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                      {(t.user?.full_name || t.name || "T").charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{t.user?.full_name || t.name || "Unknown"}</p>
+                      <p className="text-sm text-gray-600">{t.staff_id || `TCH-${t.id}`}</p>
+                    </div>
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
-
-          {/* Classes Selection */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Users className="h-5 w-5 text-green-600" />
-              Select Classes to Assign
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {availableClasses.map((cls) => (
-                <button
-                  key={cls}
-                  onClick={() => handleClassToggle(cls)}
-                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    selectedClasses.includes(cls)
-                      ? "bg-green-600 text-white border-green-600"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {cls}
-                </button>
-              ))}
+              {filteredTeachers.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">No teachers found matching your search.</p>
+              )}
             </div>
-            {selectedClasses.length > 0 && (
-              <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-700">
-                  <strong>Selected Classes:</strong> {selectedClasses.join(", ")}
-                </p>
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <button
-              onClick={handleAssign}
-              disabled={selectedSubjects.length === 0 || selectedClasses.length === 0}
-              className={`px-6 py-3 rounded-lg font-medium ${
-                selectedSubjects.length > 0 && selectedClasses.length > 0
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-            >
-              Confirm Assignment
-            </button>
-            <button
-              onClick={() => navigate({ to: "/admin/teachers" })}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
-            >
-              Cancel
-            </button>
-          </div>
+          {/* Teacher Information - Show only after teacher is selected */}
+          {teacher && (
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
+                    {initials}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{teacherName}</h3>
+                    <p className="text-sm text-gray-600">{staffId} • {department}</p>
+                    <div className="flex gap-4 mt-2">
+                      <div className="text-sm">
+                        <span className="text-gray-500">Current Subjects:</span>
+                        <span className="ml-2 font-medium">{selectedSubjects.join(", ") || "—"}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-gray-500">Current Classes:</span>
+                        <span className="ml-2 font-medium">{selectedClasses.join(", ") || "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setTeacher(null);
+                    setSelectedSubjects([]);
+                    setSelectedClasses([]);
+                    setTeacherSearch("");
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-sm"
+                >
+                  Change Teacher
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Subjects Selection - Only show after teacher is selected */}
+          {teacher && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-blue-600" />
+                Select Subjects to Teach
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {subjects.map((subject) => (
+                  <button
+                    key={subject.id}
+                    onClick={() => handleSubjectToggle(subject.name)}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      selectedSubjects.includes(subject.name)
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {subject.name}
+                  </button>
+                ))}
+              </div>
+              {subjects.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">No subjects available. Please add subjects in Academic Structure first.</p>
+              )}
+              {selectedSubjects.length > 0 && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    <strong>Selected Subjects:</strong> {selectedSubjects.join(", ")}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Classes Selection - Only show after teacher is selected */}
+          {teacher && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Users className="h-5 w-5 text-green-600" />
+                Select Classes to Assign
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {classes.map((cls) => (
+                  <button
+                    key={cls.id}
+                    onClick={() => handleClassToggle(cls.name)}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      selectedClasses.includes(cls.name)
+                        ? "bg-green-600 text-white border-green-600"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {cls.name}
+                  </button>
+                ))}
+              </div>
+              {classes.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">No classes available. Please add classes in Academic Structure first.</p>
+              )}
+              {selectedClasses.length > 0 && (
+                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  <p className="text-sm text-green-700">
+                    <strong>Selected Classes:</strong> {selectedClasses.join(", ")}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons - Only show after teacher is selected */}
+          {teacher && (
+            <div className="flex gap-3">
+              <button
+                onClick={handleAssign}
+                disabled={selectedSubjects.length === 0 || selectedClasses.length === 0}
+                className={`px-6 py-3 rounded-lg font-medium ${
+                  selectedSubjects.length > 0 && selectedClasses.length > 0
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                Confirm Assignment
+              </button>
+              <button
+                onClick={() => navigate({ to: "/admin/teachers" })}
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -98,8 +98,8 @@ function AdminOverview() {
           <div className="space-y-3">
             {[
               { icon: CheckCircle, label: "Server Status", value: "Operational", color: "text-chart-5" },
-              { icon: Clock, label: "Uptime", value: "99.97%", color: "text-primary" },
-              { icon: AlertCircle, label: "Pending Issues", value: "3", color: "text-accent" },
+              { icon: Clock, label: "Uptime", value: "—", color: "text-primary" },
+              { icon: AlertCircle, label: "Pending Issues", value: "—", color: "text-accent" },
             ].map((s) => (
               <div key={s.label} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
                 <s.icon className={`h-5 w-5 ${s.color}`} />
@@ -115,12 +115,12 @@ function AdminOverview() {
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-3xl font-bold text-gradient">94.2%</p>
-                <p className="mt-1 text-sm text-muted-foreground">1,176 / 1,247 present</p>
+                <p className="text-3xl font-bold text-gradient">—</p>
+                <p className="mt-1 text-sm text-muted-foreground">No data available</p>
               </div>
             </div>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary">
-              <div className="h-full w-[94.2%] rounded-full bg-hero-gradient" />
+              <div className="h-full w-0 rounded-full bg-hero-gradient" />
             </div>
           </div>
         </div>

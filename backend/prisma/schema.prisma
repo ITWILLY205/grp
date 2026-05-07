@@ -3,17 +3,17 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
   id            Int       @id @default(autoincrement())
-  username      String    @unique @db.VarChar(50)
-  password      String    @db.VarChar(255)
-  role          String   @db.VarChar(20)
-  full_name     String?   @db.VarChar(100)
-  email         String?   @db.VarChar(100)
+  username      String    @unique
+  password      String
+  role          String
+  full_name     String?
+  email         String?
   created_at    DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -28,8 +28,8 @@ model User {
 
 model AcademicYear {
   id      Int      @id @default(autoincrement())
-  name    String   @db.VarChar(20)
-  status  String   @default("Active") @db.VarChar(20)
+  name    String
+  status  String   @default("Active")
   terms   Term[]
 
   @@map("academic_years")
@@ -38,9 +38,9 @@ model AcademicYear {
 model Term {
   id          Int      @id @default(autoincrement())
   year_id     Int
-  name        String   @db.VarChar(20)
-  start_date  DateTime? @db.Date
-  end_date    DateTime? @db.Date
+  name        String
+  start_date  DateTime?
+  end_date    DateTime?
 
   year        AcademicYear @relation(fields: [year_id], references: [id], onDelete: Cascade)
   marks       Mark[]
@@ -51,7 +51,7 @@ model Term {
 
 model Class {
   id      Int      @id @default(autoincrement())
-  name    String   @db.VarChar(20)
+  name    String
   streams Stream[]
   students Student[]
 
@@ -61,7 +61,7 @@ model Class {
 model Stream {
   id        Int      @id @default(autoincrement())
   class_id  Int
-  name      String   @db.VarChar(20)
+  name      String
 
   class     Class    @relation(fields: [class_id], references: [id], onDelete: Cascade)
   students  Student[]
@@ -72,9 +72,9 @@ model Stream {
 
 model Subject {
   id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(100)
-  code      String?  @unique @db.VarChar(10)
-  category  String   @default("CORE") @db.VarChar(20)
+  name      String
+  code      String?  @unique
+  category  String   @default("CORE")
 
   marks     Mark[]
   teacherAssignments TeacherAssignment[]
@@ -85,8 +85,8 @@ model Subject {
 model Teacher {
   id              Int      @id @default(autoincrement())
   user_id         Int      @unique
-  staff_id        String   @unique @db.VarChar(20)
-  specialization  String?  @db.VarChar(100)
+  staff_id        String   @unique
+  specialization  String?
 
   user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   assignments     TeacherAssignment[]
@@ -112,11 +112,11 @@ model TeacherAssignment {
 model Student {
   id            Int      @id @default(autoincrement())
   user_id       Int      @unique
-  student_id    String   @unique @db.VarChar(20)
+  student_id    String   @unique
   class_id      Int?
   stream_id     Int?
-  parent_name   String?  @db.VarChar(100)
-  parent_phone  String?  @db.VarChar(20)
+  parent_name   String?
+  parent_phone  String?
 
   user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   class         Class?   @relation(fields: [class_id], references: [id])
@@ -136,7 +136,7 @@ model Mark {
   cat_score     Int      @default(0)
   exam_score    Int      @default(0)
   total_score   Int      @default(0)
-  grade         String?  @db.VarChar(2)
+  grade         String?
 
   student       Student  @relation(fields: [student_id], references: [id])
   subject       Subject  @relation(fields: [subject_id], references: [id])
@@ -149,8 +149,8 @@ model Mark {
 model Attendance {
   id            Int      @id @default(autoincrement())
   student_id    Int
-  date          DateTime @db.Date
-  status        String   @default("Present") @db.VarChar(20)
+  date          DateTime
+  status        String   @default("Present")
 
   student       Student  @relation(fields: [student_id], references: [id])
 
@@ -162,10 +162,10 @@ model DisciplineIncident {
   id              Int      @id @default(autoincrement())
   student_id      Int
   reported_by     Int
-  description     String?  @db.Text
-  action_taken    String?  @db.Text
+  description     String?
+  action_taken    String?
   punishment_marks Int     @default(0)
-  date            DateTime? @db.Date
+  date            DateTime?
 
   student         Student  @relation(fields: [student_id], references: [id])
   reporter        User     @relation("ReportedBy", fields: [reported_by], references: [id])
@@ -177,10 +177,10 @@ model Notification {
   id              Int      @id @default(autoincrement())
   sender_id       Int?
   recipient_id    Int?
-  recipient_role  String?   @db.VarChar(20)
-  title           String?  @db.VarChar(255)
-  message         String   @db.Text
-  type            String   @default("general") @db.VarChar(20)
+  recipient_role  String?
+  title           String?
+  message         String
+  type            String   @default("general")
   is_read         Boolean  @default(false)
   created_at      DateTime @default(now())
 

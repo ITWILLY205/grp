@@ -1,135 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
-
-// Import the same teachers data
-const teachersData = [
-  { 
-    id: 1, 
-    indexNumber: "TCH-001", 
-    name: "John Mugabo", 
-    gender: "Male", 
-    dob: "1985-03-15", 
-    email: "john.mugabo@school.com", 
-    phone: "+250788123456",
-    nationalId: "1199080012345678",
-    address: "KG 123 St",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Christian",
-    bloodGroup: "O+",
-    qualification: "Masters in Education",
-    department: "Science",
-    specialization: "Mathematics",
-    employmentDate: "2020-01-15",
-    status: "Active",
-    subjects: ["Mathematics", "Physics"],
-    classes: ["Form 3", "Form 4"],
-    emergencyContact: "Jane Mugabo",
-    emergencyPhone: "+250732123456",
-    bankAccount: "1234567890",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234567",
-    nssfNumber: "NSSF123456",
-    salary: 800000,
-    contractType: "Permanent"
-  },
-  { 
-    id: 2, 
-    indexNumber: "TCH-002", 
-    name: "Sarah Uwimana", 
-    gender: "Female", 
-    dob: "1990-07-22", 
-    email: "sarah.uwimana@school.com", 
-    phone: "+250787234567",
-    nationalId: "1199080012345679",
-    address: "KN 456 Ave",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Muslim",
-    bloodGroup: "A+",
-    qualification: "Bachelors in Science",
-    department: "Science",
-    specialization: "Chemistry",
-    employmentDate: "2021-08-01",
-    status: "Active",
-    subjects: ["Chemistry", "Biology"],
-    classes: ["Form 2", "Form 3"],
-    emergencyContact: "Peter Uwimana",
-    emergencyPhone: "+250734234567",
-    bankAccount: "0987654321",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234568",
-    nssfNumber: "NSSF123457",
-    salary: 750000,
-    contractType: "Permanent"
-  },
-  { 
-    id: 3, 
-    indexNumber: "TCH-003", 
-    name: "David Habimana", 
-    gender: "Male", 
-    dob: "1988-11-10", 
-    email: "david.habimana@school.com", 
-    phone: "+250789345678",
-    nationalId: "1199080012345680",
-    address: "NY 789 Rd",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Christian",
-    bloodGroup: "B+",
-    qualification: "Masters in Literature",
-    department: "Languages",
-    specialization: "English",
-    employmentDate: "2019-03-20",
-    status: "Active",
-    subjects: ["English", "Literature"],
-    classes: ["Form 1", "Form 2"],
-    emergencyContact: "Grace Habimana",
-    emergencyPhone: "+250735345678",
-    bankAccount: "1122334455",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234569",
-    nssfNumber: "NSSF123458",
-    salary: 780000,
-    contractType: "Permanent"
-  },
-  { 
-    id: 4, 
-    indexNumber: "TCH-004", 
-    name: "Grace Mukamana", 
-    gender: "Female", 
-    dob: "1992-05-18", 
-    email: "grace.mukamana@school.com", 
-    phone: "+250786456789",
-    nationalId: "1199080012345681",
-    address: "KG 321 St",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Christian",
-    bloodGroup: "AB+",
-    qualification: "Bachelors in Arts",
-    department: "Social Studies",
-    specialization: "History",
-    employmentDate: "2022-02-10",
-    status: "Active",
-    subjects: ["History", "Geography"],
-    classes: ["Form 4", "Form 5"],
-    emergencyContact: "Joseph Mukamana",
-    emergencyPhone: "+250736456789",
-    bankAccount: "2233445566",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234570",
-    nssfNumber: "NSSF123459",
-    salary: 720000,
-    contractType: "Permanent"
-  },
-];
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { peopleApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/edit-teacher")({
   component: EditTeacher,
@@ -137,12 +11,70 @@ export const Route = createFileRoute("/admin/edit-teacher")({
 
 function EditTeacher() {
   const navigate = useNavigate();
-  const urlParams = new URLSearchParams(window.location.search);
-  const teacherId = parseInt(urlParams.get('id') || '1');
-  
-  const teacher = teachersData.find(t => t.id === teacherId);
-  
-  if (!teacher) {
+  const { id } = useParams({ from: "/admin/edit-teacher" });
+  const teacherId = parseInt(id || "1");
+
+  const [teacher, setTeacher] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    department: "",
+    subjects: "",
+    classes: "",
+  });
+
+  useEffect(() => {
+    fetchTeacher();
+  }, [teacherId]);
+
+  const fetchTeacher = async () => {
+    setLoading(true);
+    try {
+      const res = await peopleApi.getTeachers();
+      const found = res.data?.find((t: any) => t.id === teacherId);
+      if (!found) {
+        setNotFound(true);
+      } else {
+        setTeacher(found);
+        const assignments = found.assignments || [];
+        const subjectsList = [...new Set(assignments.map((a: any) => a.subject?.name).filter(Boolean))];
+        const classesList = [...new Set(assignments.map((a: any) => a.stream?.class?.name || a.class?.name).filter(Boolean))];
+        setFormData({
+          name: found.user?.full_name || "",
+          email: found.user?.email || found.user?.username || "",
+          phone: found.phone || "",
+          department: found.department || "",
+          subjects: subjectsList.join(", "),
+          classes: classesList.join(", "),
+        });
+      }
+    } catch (err: any) {
+      toast.error("Failed to load teacher");
+      setNotFound(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    alert("Edit teacher - API integration pending");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-600">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="text-lg">Loading teacher...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound || !teacher) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -158,29 +90,6 @@ function EditTeacher() {
       </div>
     );
   }
-
-  const [formData, setFormData] = useState({
-    name: teacher.name,
-    email: teacher.email,
-    phone: teacher.phone,
-    department: teacher.department,
-    subjects: teacher.subjects.join(", "),
-    classes: teacher.classes.join(", "),
-  });
-
-  const handleSubmit = () => {
-    // Update teacher data
-    const index = teachersData.findIndex(t => t.id === teacher.id);
-    if (index > -1) {
-      teachersData[index] = {
-        ...teachersData[index],
-        ...formData,
-        subjects: formData.subjects.split(",").map(s => s.trim()).filter(s => s),
-        classes: formData.classes.split(",").map(c => c.trim()).filter(c => c),
-      };
-      navigate({ to: "/admin/teachers" });
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">

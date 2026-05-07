@@ -271,4 +271,135 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res) => {
   }
 });
 
+// Assign classes and subjects to a teacher
+router.post('/:id/assignments', authenticate, authorize('ADMIN'), async (req, res) => {
+  try {
+    const teacherId = parseInt(req.params.id);
+    const schema = z.object({
+      subjects: z.array(z.string().min(1)),
+      classes: z.array(z.string().min(1)),
+    });
+
+    const data = schema.parse(req.body);
+
+    // Find the currently active term (based on active academic year)
+    const activeTerm = await prisma.term.findFirst({
+      where: {
+        year: {
+          status: 'Active',
+        },
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+
+    if (!activeTerm) {
+      return res.status(400).json({ error: 'No active academic term found. Please set an active academic year and term first.' });
+    }
+
+    // Resolve subject names to IDs
+    const subjects = await prisma.subject.findMany({
+      where: {
+        name: {
+          in: data.subjects,
+        },
+      },
+    });
+
+    const missingSubjects = data.subjects.filter(name => !subjects.find(s => s.name === name));
+    if (missingSubjects.length > 0) {
+      return res.status(400).json({ error: `Subjects not found: ${missingSubjects.join(', ')}` });
+    }
+
+    // Resolve class names to IDs and get all their streams
+    const classes = await prisma.class.findMany({
+      where: {
+        name: {
+          in: data.classes,
+        },
+      },
+      include: {
+        streams: true,
+      },
+    });
+
+    const missingClasses = data.classes.filter(name => !classes.find(c => c.name === name));
+    if (missingClasses.length > 0) {
+      return res.status(400).json({ error: `Classes not found: ${missingClasses.join(', ')}` });
+    }
+
+    const streams = classes.flatMap(c => c.streams);
+    if (streams.length === 0) {
+      return res.status(400).json({ error: 'Selected classes have no streams. Please add streams first.' });
+    }
+
+    // Replace existing assignments for this teacher in the current term
+    await prisma.$transaction(async (tx) => {
+      await tx.teacherAssignment.deleteMany({
+        where: {
+          teacher_id: teacherId,
+          term_id: activeTerm.id,
+        },
+      });
+
+      const assignmentSet = new Set<string>();
+      const assignmentsToCreate: { teacher_id: number; subject_id: number; stream_id: number; term_id: number }[] = [];
+      for (const subject of subjects) {
+        for (const stream of streams) {
+          const key = `${subject.id}-${stream.id}`;
+          if (!assignmentSet.has(key)) {
+            assignmentSet.add(key);
+            assignmentsToCreate.push({
+              teacher_id: teacherId,
+              subject_id: subject.id,
+              stream_id: stream.id,
+              term_id: activeTerm.id,
+            });
+          }
+        }
+      }
+
+      await tx.teacherAssignment.createMany({
+        data: assignmentsToCreate,
+      });
+    });
+
+    // Return updated teacher with assignments
+    const teacher = await prisma.teacher.findUnique({
+      where: { id: teacherId },
+      include: {
+        user: {
+          select: {
+            full_name: true,
+          },
+        },
+        assignments: {
+          include: {
+            subject: true,
+            stream: {
+              include: {
+                class: true,
+              },
+            },
+            term: {
+              include: {
+                year: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.json({ success: true, teacher });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error('Assign classes error:', error);
+    res.status(500).json({ error: 'Failed to assign classes and subjects' });
+  }
+});
+
 export default router;

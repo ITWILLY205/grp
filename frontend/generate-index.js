@@ -59,6 +59,22 @@ fs.writeFileSync(path.join(distDir, '404.html'), html);
 import { cpSync } from 'fs';
 cpSync(path.join(__dirname, 'dist', 'client'), distDir, { recursive: true });
 
+// Patch the final deployed entry bundle to use createRoot instead of hydrateRoot.
+// Without SSR, hydration fails because there's no server-rendered markup to hydrate.
+const finalBundlePath = path.join(distDir, 'assets', indexJs);
+if (fs.existsSync(finalBundlePath)) {
+  let finalContent = fs.readFileSync(finalBundlePath, 'utf-8');
+  const patchedFinal = finalContent.replaceAll('.hydrateRoot(document,', '.createRoot(document).render(');
+  if (patchedFinal !== finalContent) {
+    fs.writeFileSync(finalBundlePath, patchedFinal);
+    console.log('Patched entry bundle: hydrateRoot -> createRoot().render()');
+  } else {
+    console.warn('Warning: Could not find hydrateRoot call to patch.');
+  }
+} else {
+  console.warn('Warning: Final entry bundle not found at ' + finalBundlePath);
+}
+
 // vercel.json: serve existing files first, then fallback to index.html for SPA routes
 const vercelConfig = {
   "rewrites": [

@@ -4,36 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Mail, Phone, MessageSquare, Send } from "lucide-react";
 
 // Import the same teachers data
-const teachersData = [
-  { 
-    id: 1, 
-    indexNumber: "TCH-001", 
-    name: "John Mugabo", 
-    email: "john.mugabo@school.com",
-    phone: "+250788123456",
-  },
-  { 
-    id: 2, 
-    indexNumber: "TCH-002", 
-    name: "Sarah Uwimana", 
-    email: "sarah.uwimana@school.com",
-    phone: "+250787234567",
-  },
-  { 
-    id: 3, 
-    indexNumber: "TCH-003", 
-    name: "David Habimana", 
-    email: "david.habimana@school.com",
-    phone: "+250789345678",
-  },
-  { 
-    id: 4, 
-    indexNumber: "TCH-004", 
-    name: "Grace Mukamana", 
-    email: "grace.mukamana@school.com",
-    phone: "+250786456789",
-  },
-];
+const teachersData: any[] = [];
 
 export const Route = createFileRoute("/admin/send-notification")({
   component: SendNotification,

@@ -464,19 +464,19 @@ function AcademicStructure() {
 }
 
 // B. Subject & Teacher Assignment
-function TeacherAssignment() {
-  const [assignments, setAssignments] = useState([
-    { id: 1, teacher: "John Mugabo", subject: "Mathematics", class: "S1", stream: "A" },
-    { id: 2, teacher: "Sarah Uwimana", subject: "Physics", class: "S2", stream: "B" },
-    { id: 3, teacher: "David Habimana", subject: "Chemistry", class: "S3", stream: "A" },
-    { id: 4, teacher: "Grace Mukamana", subject: "Biology", class: "S4", stream: "B" },
-  ]);
+function ClassAnalytics() {
+  return (
+    <div className="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+      <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">Class Analytics Coming Soon</h3>
+      <p className="text-gray-600">This feature is currently under development to provide deep insights into class performance.</p>
+    </div>
+  );
+}
 
-  const [showNewAssignment, setShowNewAssignment] = useState(false);
-  const [newTeacher, setNewTeacher] = useState("");
-  const [newSubject, setNewSubject] = useState("");
-  const [newClass, setNewClass] = useState("");
-  const [newStream, setNewStream] = useState("");
+function TeacherAssignment() {
+  const navigate = useNavigate();
+  const [assignments, setAssignments] = useState<any[]>([]);
 
   const [classesList, setClassesList] = useState<{id: number, name: string}[]>([]);
   const [subjectsList, setSubjectsList] = useState<{id: number, name: string}[]>([]);
@@ -486,81 +486,24 @@ function TeacherAssignment() {
     academicApi.getSubjects().then(res => setSubjectsList(res.data)).catch(() => {});
   }, []);
 
-  const allTeachers = ["John Mugabo", "Sarah Uwimana", "David Habimana", "Grace Mukamana", "Eric Nshuti", "Jane Mukamana"];
+  const [allTeachers, setAllTeachers] = useState<string[]>([]);
+
+  useEffect(() => {
+    peopleApi.getTeachers().then(res => {
+      setAllTeachers(res.data.map((t: any) => t.user?.full_name || t.name || "Unknown"));
+    }).catch(() => {});
+  }, []);
   const allStreams = ["A", "B", "C"];
-
-  const handleAddClass = async () => {
-    if (newClassName.trim()) {
-      try {
-        await academicApi.addClass(newClassName.trim());
-        toast.success("Class added successfully");
-        setNewClassName("");
-        setShowAddClass(false);
-        fetchClasses();
-      } catch (error) {
-        toast.error("Failed to save class to database");
-      }
-    }
-  };
-
-  const handleAddAssignment = () => {
-    if (newTeacher && newSubject && newClass && newStream) {
-      setAssignments([...assignments, { id: Date.now(), teacher: newTeacher, subject: newSubject, class: newClass, stream: newStream }]);
-      setNewTeacher(""); setNewSubject(""); setNewClass(""); setNewStream("");
-      setShowNewAssignment(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Subject & Teacher Assignment</h2>
-        <button onClick={() => setShowNewAssignment(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+        <button onClick={() => navigate({ to: "/admin/assign-classes" })} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
           <Plus className="h-4 w-4" />
           New Assignment
         </button>
       </div>
-
-      {/* New Assignment Form */}
-      {showNewAssignment && (
-        <div className="bg-sky-50 border border-sky-200 rounded-lg p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Create New Assignment</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teacher *</label>
-              <select value={newTeacher} onChange={(e) => setNewTeacher(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
-                <option value="">Select Teacher</option>
-                {allTeachers.map((t) => (<option key={t} value={t}>{t}</option>))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-              <select value={newSubject} onChange={(e) => setNewSubject(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
-                <option value="">Select Subject</option>
-                {subjectsList.map((s) => (<option key={s.id} value={s.name}>{s.name}</option>))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Class *</label>
-              <select value={newClass} onChange={(e) => setNewClass(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
-                <option value="">Select Class</option>
-                {classesList.map((c) => (<option key={c.id} value={c.name}>{c.name}</option>))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stream *</label>
-              <select value={newStream} onChange={(e) => setNewStream(e.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
-                <option value="">Select Stream</option>
-                {allStreams.map((s) => (<option key={s} value={s}>{s}</option>))}
-              </select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3">
-            <button onClick={() => { setShowNewAssignment(false); setNewTeacher(""); setNewSubject(""); setNewClass(""); setNewStream(""); }} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm">Cancel</button>
-            <button onClick={handleAddAssignment} disabled={!newTeacher || !newSubject || !newClass || !newStream} className={`px-4 py-2 rounded-lg text-sm ${newTeacher && newSubject && newClass && newStream ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Add Assignment</button>
-          </div>
-        </div>
-      )}
 
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full">
@@ -1520,8 +1463,8 @@ function ProgressiveReports() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${Object.entries(student.marks).map(([subject, mark], index) => {
-                        let grade, remarks, position = '';
+                    ${Object.entries(student.marks).map(([subject, mark]: [string, any], index) => {
+                        let grade, remarks, position: any = '';
                         if (mark >= 80) { grade = 'A'; remarks = 'Excellent'; position = index + 1; }
                         else if (mark >= 70) { grade = 'B'; remarks = 'Very Good'; position = index + 1; }
                         else if (mark >= 60) { grade = 'C'; remarks = 'Good'; position = index + 1; }

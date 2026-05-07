@@ -13,13 +13,7 @@ export const Route = createFileRoute('/discipline-master/')({
   component: DODOverview,
 });
 
-const recentActivity = [
-  { user: "DOD Officer", action: "Resolved discipline case #452", time: "5 min ago", type: "resolved" },
-  { user: "System", action: "New permission request from Student #1245", time: "12 min ago", type: "permission" },
-  { user: "DOD Officer", action: "Marked attendance for Class 10-B", time: "1 hour ago", type: "attendance" },
-  { user: "Mr. Johnson", action: "Reported student misconduct", time: "2 hours ago", type: "report" },
-  { user: "DOD Officer", action: "Approved leave request #78", time: "3 hours ago", type: "approved" },
-];
+const recentActivity: any[] = []; // Will be populated from API in future
 
 function DODOverview() {
   return (
@@ -31,10 +25,10 @@ function DODOverview() {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Users} label="Total Students" value="1,247" change="+5 today" changeType="up" color="bg-primary/10 text-primary" />
-        <StatCard icon={Shield} label="Active Cases" value="12" change="3 urgent" changeType="neutral" color="bg-accent/10 text-accent" />
-        <StatCard icon={AlertTriangle} label="Incidents Today" value="4" change="-2 vs yesterday" changeType="up" color="bg-chart-5/10 text-chart-5" />
-        <StatCard icon={CheckCircle} label="Resolved Cases" value="89%" change="+4.2%" changeType="up" color="bg-chart-4/10 text-chart-4" />
+        <StatCard icon={Users} label="Total Students" value="—" change="" changeType="neutral" color="bg-primary/10 text-primary" />
+        <StatCard icon={Shield} label="Active Cases" value="—" change="" changeType="neutral" color="bg-accent/10 text-accent" />
+        <StatCard icon={AlertTriangle} label="Incidents Today" value="—" change="" changeType="neutral" color="bg-chart-5/10 text-chart-5" />
+        <StatCard icon={CheckCircle} label="Resolved Cases" value="—" change="" changeType="neutral" color="bg-chart-4/10 text-chart-4" />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">

@@ -1,133 +1,8 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Mail, Phone, Calendar, BookOpen, Edit, Trash2, User, Shield, DollarSign, MapPin, AlertCircle } from "lucide-react";
-
-// Import the same teachers data
-const teachersData = [
-  { 
-    id: 1, 
-    indexNumber: "TCH-001", 
-    name: "John Mugabo", 
-    gender: "Male", 
-    dob: "1985-03-15", 
-    email: "john.mugabo@school.com", 
-    phone: "+250788123456",
-    nationalId: "1199080012345678",
-    address: "KG 123 St",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Christian",
-    bloodGroup: "O+",
-    qualification: "Masters in Education",
-    department: "Science",
-    specialization: "Mathematics",
-    employmentDate: "2020-01-15",
-    status: "Active",
-    subjects: ["Mathematics", "Physics"],
-    classes: ["Form 3", "Form 4"],
-    emergencyContact: "Jane Mugabo",
-    emergencyPhone: "+250732123456",
-    bankAccount: "1234567890",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234567",
-    nssfNumber: "NSSF123456",
-    salary: 800000,
-    contractType: "Permanent"
-  },
-  { 
-    id: 2, 
-    indexNumber: "TCH-002", 
-    name: "Sarah Uwimana", 
-    gender: "Female", 
-    dob: "1990-07-22", 
-    email: "sarah.uwimana@school.com", 
-    phone: "+250787234567",
-    nationalId: "1199080012345679",
-    address: "KN 456 Ave",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Muslim",
-    bloodGroup: "A+",
-    qualification: "Bachelors in Science",
-    department: "Science",
-    specialization: "Chemistry",
-    employmentDate: "2021-08-01",
-    status: "Active",
-    subjects: ["Chemistry", "Biology"],
-    classes: ["Form 2", "Form 3"],
-    emergencyContact: "Peter Uwimana",
-    emergencyPhone: "+250734234567",
-    bankAccount: "0987654321",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234568",
-    nssfNumber: "NSSF123457",
-    salary: 750000,
-    contractType: "Permanent"
-  },
-  { 
-    id: 3, 
-    indexNumber: "TCH-003", 
-    name: "David Habimana", 
-    gender: "Male", 
-    dob: "1988-11-10", 
-    email: "david.habimana@school.com", 
-    phone: "+250789345678",
-    nationalId: "1199080012345680",
-    address: "NY 789 Rd",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Christian",
-    bloodGroup: "B+",
-    qualification: "Masters in Literature",
-    department: "Languages",
-    specialization: "English",
-    employmentDate: "2019-03-20",
-    status: "Active",
-    subjects: ["English", "Literature"],
-    classes: ["Form 1", "Form 2"],
-    emergencyContact: "Grace Habimana",
-    emergencyPhone: "+250735345678",
-    bankAccount: "1122334455",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234569",
-    nssfNumber: "NSSF123458",
-    salary: 780000,
-    contractType: "Permanent"
-  },
-  { 
-    id: 4, 
-    indexNumber: "TCH-004", 
-    name: "Grace Mukamana", 
-    gender: "Female", 
-    dob: "1992-05-18", 
-    email: "grace.mukamana@school.com", 
-    phone: "+250786456789",
-    nationalId: "1199080012345681",
-    address: "KG 321 St",
-    city: "Kigali",
-    district: "Kigali",
-    nationality: "Rwandan",
-    religion: "Christian",
-    bloodGroup: "AB+",
-    qualification: "Bachelors in Arts",
-    department: "Social Studies",
-    specialization: "History",
-    employmentDate: "2022-02-10",
-    status: "Active",
-    subjects: ["History", "Geography"],
-    classes: ["Form 4", "Form 5"],
-    emergencyContact: "Joseph Mukamana",
-    emergencyPhone: "+250736456789",
-    bankAccount: "2233445566",
-    bankName: "Bank of Kigali",
-    tinNumber: "101234570",
-    nssfNumber: "NSSF123459",
-    salary: 720000,
-    contractType: "Permanent"
-  },
-];
+import { ArrowLeft, Mail, Phone, Calendar, BookOpen, Edit, Trash2, User, Shield, DollarSign, MapPin, AlertCircle, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { peopleApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/teachers/$id")({
   component: TeacherProfilePage,
@@ -137,10 +12,45 @@ function TeacherProfilePage() {
   const navigate = useNavigate();
   const { id } = useParams({ from: "/admin/teachers/$id" });
   const teacherId = parseInt(id);
-  
-  const teacher = teachersData.find(t => t.id === teacherId);
-  
-  if (!teacher) {
+
+  const [teacher, setTeacher] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    fetchTeacher();
+  }, [teacherId]);
+
+  const fetchTeacher = async () => {
+    setLoading(true);
+    try {
+      const res = await peopleApi.getTeachers();
+      const found = res.data?.find((t: any) => t.id === teacherId);
+      if (!found) {
+        setNotFound(true);
+      } else {
+        setTeacher(found);
+      }
+    } catch (err: any) {
+      toast.error("Failed to load teacher");
+      setNotFound(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-600">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="text-lg">Loading teacher profile...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound || !teacher) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -157,57 +67,71 @@ function TeacherProfilePage() {
     );
   }
 
+  // Map API fields to display fields (fallback to "—" for missing fields)
+  const name = teacher.user?.full_name || "—";
+  const initials = name !== "—" ? name.charAt(0) : "?";
+  const email = teacher.user?.email || teacher.user?.username || "—";
+  const phone = teacher.phone || "—";
+  const status = teacher.status || "Active";
+  const staffId = teacher.staff_id || `TCH-${teacher.id}`;
+  const dob = teacher.dob || "—";
+  const address = teacher.address || "—";
+  const city = teacher.city || "—";
+  const district = teacher.district || "—";
+  const nationality = teacher.nationality || "—";
+  const religion = teacher.religion || "—";
+  const bloodGroup = teacher.blood_group || "—";
+  const qualification = teacher.qualification || "—";
+  const department = teacher.department || "—";
+  const specialization = teacher.specialization || "—";
+  const employmentDate = teacher.employment_date || teacher.employmentDate || "—";
+  const contractType = teacher.contract_type || teacher.contractType || "—";
+  const salary = teacher.salary;
+  const bankName = teacher.bank_name || teacher.bankName || "—";
+  const bankAccount = teacher.bank_account || teacher.bankAccount || "—";
+  const tinNumber = teacher.tin_number || teacher.tinNumber || "—";
+  const nssfNumber = teacher.nssf_number || teacher.nssfNumber || "—";
+  const emergencyContact = teacher.emergency_contact || teacher.emergencyContact || "—";
+  const emergencyPhone = teacher.emergency_phone || teacher.emergencyPhone || "—";
+
+  // Derive subjects/classes from assignments
+  const assignments = teacher.assignments || [];
+  const subjectsList = [...new Set(assignments.map((a: any) => a.subject?.name).filter(Boolean))];
+  const classesList = [...new Set(assignments.map((a: any) => a.stream?.class?.name || a.class?.name).filter(Boolean))];
+
   const handleQuickAction = (action: string) => {
     switch (action) {
       case "suspend":
-        const newStatus = teacher.status === "Active" ? "Inactive" : "Active";
-        const index = teachersData.findIndex(t => t.id === teacher.id);
-        if (index > -1) {
-          teachersData[index].status = newStatus;
-          alert(`Teacher ${newStatus === "Active" ? "activated" : "suspended"} successfully!`);
-          window.location.reload(); // Refresh to show updated status
-        }
+        alert("Suspend/Activate would update the database via API (not yet implemented)");
         break;
       case "assign":
-        const newSubjects = prompt("Enter subjects (comma separated):", teacher.subjects.join(", "));
-        const newClasses = prompt("Enter classes (comma separated):", teacher.classes.join(", "));
-        if (newSubjects !== null && newClasses !== null) {
-          const assignIndex = teachersData.findIndex(t => t.id === teacher.id);
-          if (assignIndex > -1) {
-            teachersData[assignIndex].subjects = newSubjects.split(",").map(s => s.trim()).filter(s => s);
-            teachersData[assignIndex].classes = newClasses.split(",").map(c => c.trim()).filter(c => c);
-            alert("Assignments updated successfully!");
-            window.location.reload();
-          }
-        }
+        navigate({ to: "/admin/academics" });
         break;
       case "delete":
-        if (confirm(`Are you sure you want to delete ${teacher.name}? This action cannot be undone.`)) {
-          const deleteIndex = teachersData.findIndex(t => t.id === teacher.id);
-          if (deleteIndex > -1) {
-            teachersData.splice(deleteIndex, 1);
-            alert("Teacher deleted successfully!");
-            navigate({ to: "/admin/teachers" });
-          }
+        if (confirm(`Delete this teacher? This cannot be undone.`)) {
+          alert("Delete would call DELETE /teachers/${teacherId} (not yet implemented)");
         }
         break;
       case "resetPassword":
-        if (confirm(`Reset password for ${teacher.name}? A temporary password will be sent to their email.`)) {
-          alert(`Password reset link sent to ${teacher.email}`);
+        if (confirm(`Reset password for ${name}?`)) {
+          alert(`Password reset request sent for ${name}`);
         }
         break;
       case "sendNotification":
         const message = prompt("Enter notification message:");
         if (message) {
-          alert(`Notification sent to ${teacher.name}: "${message}"`);
+          alert(`Notification sent to ${name}: "${message}"`);
         }
         break;
       case "edit":
-        // Navigate to edit page (you can create this later)
-        alert("Edit functionality would navigate to edit page");
+        navigate({ to: "/admin/teachers" });
         break;
     }
   };
+
+  const yearsOfService = employmentDate !== "—"
+    ? Math.floor((new Date().getTime() - new Date(employmentDate).getTime()) / (1000 * 60 * 60 * 24 * 365))
+    : "—";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -222,7 +146,7 @@ function TeacherProfilePage() {
             Back to Teachers
           </button>
           <h1 className="text-3xl font-bold text-gray-900">Teacher Profile</h1>
-          <p className="text-gray-600 mt-2">Complete information and management controls for {teacher.name}</p>
+          <p className="text-gray-600 mt-2">Complete information and management controls for {name}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -231,39 +155,39 @@ function TeacherProfilePage() {
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
               <div className="text-center mb-6">
                 <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-4 shadow-lg">
-                  {teacher.name.charAt(0)}
+                  {initials}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900">{teacher.name}</h3>
-                <p className="text-sm text-gray-500 mb-3">{teacher.indexNumber}</p>
+                <h3 className="text-xl font-semibold text-gray-900">{name}</h3>
+                <p className="text-sm text-gray-500 mb-3">{staffId}</p>
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  teacher.status === "Active" ? "bg-green-100 text-green-800" :
-                  teacher.status === "Inactive" ? "bg-gray-100 text-gray-800" :
-                  teacher.status === "On Leave" ? "bg-yellow-100 text-yellow-800" :
+                  status === "Active" ? "bg-green-100 text-green-800" :
+                  status === "Inactive" ? "bg-gray-100 text-gray-800" :
+                  status === "On Leave" ? "bg-yellow-100 text-yellow-800" :
                   "bg-red-100 text-red-800"
                 }`}>
-                  {teacher.status}
+                  {status}
                 </span>
               </div>
-              
+
               <div className="space-y-4 mb-6">
                 <div className="flex items-center gap-3 text-sm">
                   <Mail className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">{teacher.email}</span>
+                  <span className="text-gray-600">{email}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <Phone className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">{teacher.phone}</span>
+                  <span className="text-gray-600">{phone}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">DOB: {teacher.dob}</span>
+                  <span className="text-gray-600">DOB: {dob}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <MapPin className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">{teacher.city}, {teacher.district}</span>
+                  <span className="text-gray-600">{city}, {district}</span>
                 </div>
               </div>
-              
+
               {/* Quick Actions */}
               <div className="space-y-3">
                 <button
@@ -273,7 +197,7 @@ function TeacherProfilePage() {
                   <Edit className="h-4 w-4" />
                   Edit Teacher
                 </button>
-                
+
                 <button
                   onClick={() => handleQuickAction("assign")}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -281,16 +205,16 @@ function TeacherProfilePage() {
                   <BookOpen className="h-4 w-4" />
                   Assign Classes
                 </button>
-                
+
                 <button
                   onClick={() => handleQuickAction("suspend")}
                   className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                    teacher.status === "Active" 
-                      ? "bg-yellow-600 text-white hover:bg-yellow-700" 
+                    status === "Active"
+                      ? "bg-yellow-600 text-white hover:bg-yellow-700"
                       : "bg-green-600 text-white hover:bg-green-700"
                   }`}
                 >
-                  {teacher.status === "Active" ? (
+                  {status === "Active" ? (
                     <>
                       <AlertCircle className="h-4 w-4" />
                       Suspend
@@ -302,7 +226,7 @@ function TeacherProfilePage() {
                     </>
                   )}
                 </button>
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => handleQuickAction("resetPassword")}
@@ -311,7 +235,7 @@ function TeacherProfilePage() {
                     <Mail className="h-4 w-4" />
                     Reset
                   </button>
-                  
+
                   <button
                     onClick={() => handleQuickAction("sendNotification")}
                     className="flex items-center justify-center gap-2 px-3 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
@@ -320,7 +244,7 @@ function TeacherProfilePage() {
                     Notify
                   </button>
                 </div>
-                
+
                 <button
                   onClick={() => handleQuickAction("delete")}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -343,27 +267,29 @@ function TeacherProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Department</p>
-                  <p className="font-medium text-gray-900">{teacher.department}</p>
+                  <p className="font-medium text-gray-900">{department}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Specialization</p>
-                  <p className="font-medium text-gray-900">{teacher.specialization}</p>
+                  <p className="font-medium text-gray-900">{specialization}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Qualification</p>
-                  <p className="font-medium text-gray-900">{teacher.qualification}</p>
+                  <p className="font-medium text-gray-900">{qualification}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Employment Date</p>
-                  <p className="font-medium text-gray-900">{teacher.employmentDate}</p>
+                  <p className="font-medium text-gray-900">{employmentDate}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Contract Type</p>
-                  <p className="font-medium text-gray-900">{teacher.contractType}</p>
+                  <p className="font-medium text-gray-900">{contractType}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Monthly Salary</p>
-                  <p className="font-medium text-gray-900 text-green-600">RWF {teacher.salary?.toLocaleString()}</p>
+                  <p className="font-medium text-gray-900 text-green-600">
+                    {salary ? `RWF ${salary.toLocaleString()}` : "—"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -378,21 +304,25 @@ function TeacherProfilePage() {
                 <div>
                   <p className="text-sm text-gray-500 mb-3">Subjects Taught</p>
                   <div className="flex flex-wrap gap-2">
-                    {teacher.subjects.map((subject, index) => (
+                    {subjectsList.length > 0 ? subjectsList.map((subject: string, index: number) => (
                       <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
                         {subject}
                       </span>
-                    ))}
+                    )) : (
+                      <span className="text-sm text-gray-400">No subjects assigned</span>
+                    )}
                   </div>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-3">Classes Assigned</p>
                   <div className="flex flex-wrap gap-2">
-                    {teacher.classes.map((cls, index) => (
+                    {classesList.length > 0 ? classesList.map((cls: string, index: number) => (
                       <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
                         {cls}
                       </span>
-                    ))}
+                    )) : (
+                      <span className="text-sm text-gray-400">No classes assigned</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -411,35 +341,35 @@ function TeacherProfilePage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Date of Birth</p>
-                  <p className="font-medium text-gray-900">{teacher.dob || "—"}</p>
+                  <p className="font-medium text-gray-900">{dob}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">National ID</p>
-                  <p className="font-medium text-gray-900">{teacher.nationalId || "—"}</p>
+                  <p className="font-medium text-gray-900">{teacher.national_id || teacher.nationalId || "—"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Address</p>
-                  <p className="font-medium text-gray-900">{teacher.address || "—"}</p>
+                  <p className="font-medium text-gray-900">{address}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">City</p>
-                  <p className="font-medium text-gray-900">{teacher.city || "—"}</p>
+                  <p className="font-medium text-gray-900">{city}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">District</p>
-                  <p className="font-medium text-gray-900">{teacher.district || "—"}</p>
+                  <p className="font-medium text-gray-900">{district}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Nationality</p>
-                  <p className="font-medium text-gray-900">{teacher.nationality || "—"}</p>
+                  <p className="font-medium text-gray-900">{nationality}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Religion</p>
-                  <p className="font-medium text-gray-900">{teacher.religion || "—"}</p>
+                  <p className="font-medium text-gray-900">{religion}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Blood Group</p>
-                  <p className="font-medium text-gray-900">{teacher.bloodGroup || "—"}</p>
+                  <p className="font-medium text-gray-900">{bloodGroup}</p>
                 </div>
               </div>
             </div>
@@ -453,27 +383,29 @@ function TeacherProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Monthly Salary</p>
-                  <p className="font-medium text-gray-900 text-green-600">RWF {teacher.salary?.toLocaleString() || "—"}</p>
+                  <p className="font-medium text-gray-900 text-green-600">
+                    {salary ? `RWF ${salary.toLocaleString()}` : "—"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Bank Name</p>
-                  <p className="font-medium text-gray-900">{teacher.bankName || "—"}</p>
+                  <p className="font-medium text-gray-900">{bankName}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Bank Account</p>
-                  <p className="font-medium text-gray-900">{teacher.bankAccount || "—"}</p>
+                  <p className="font-medium text-gray-900">{bankAccount}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">TIN Number</p>
-                  <p className="font-medium text-gray-900">{teacher.tinNumber || "—"}</p>
+                  <p className="font-medium text-gray-900">{tinNumber}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">NSSF Number</p>
-                  <p className="font-medium text-gray-900">{teacher.nssfNumber || "—"}</p>
+                  <p className="font-medium text-gray-900">{nssfNumber}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Contract Type</p>
-                  <p className="font-medium text-gray-900">{teacher.contractType || "—"}</p>
+                  <p className="font-medium text-gray-900">{contractType}</p>
                 </div>
               </div>
             </div>
@@ -487,11 +419,11 @@ function TeacherProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Contact Name</p>
-                  <p className="font-medium text-gray-900">{teacher.emergencyContact || "—"}</p>
+                  <p className="font-medium text-gray-900">{emergencyContact}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Contact Phone</p>
-                  <p className="font-medium text-gray-900">{teacher.emergencyPhone || "—"}</p>
+                  <p className="font-medium text-gray-900">{emergencyPhone}</p>
                 </div>
               </div>
             </div>
@@ -504,17 +436,15 @@ function TeacherProfilePage() {
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center p-6 bg-blue-50 rounded-lg">
-                  <p className="text-3xl font-bold text-blue-600 mb-2">{teacher.subjects.length}</p>
+                  <p className="text-3xl font-bold text-blue-600 mb-2">{subjectsList.length}</p>
                   <p className="text-sm text-gray-600">Subjects Teaching</p>
                 </div>
                 <div className="text-center p-6 bg-green-50 rounded-lg">
-                  <p className="text-3xl font-bold text-green-600 mb-2">{teacher.classes.length}</p>
+                  <p className="text-3xl font-bold text-green-600 mb-2">{classesList.length}</p>
                   <p className="text-sm text-gray-600">Classes Assigned</p>
                 </div>
                 <div className="text-center p-6 bg-purple-50 rounded-lg">
-                  <p className="text-3xl font-bold text-purple-600 mb-2">
-                    {Math.floor((new Date().getTime() - new Date(teacher.employmentDate).getTime()) / (1000 * 60 * 60 * 24 * 365))}
-                  </p>
+                  <p className="text-3xl font-bold text-purple-600 mb-2">{yearsOfService}</p>
                   <p className="text-sm text-gray-600">Years of Service</p>
                 </div>
               </div>

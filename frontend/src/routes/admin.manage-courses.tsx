@@ -1,99 +1,56 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, DataTable } from "@/components/dashboard/SharedUI";
-import { useState } from "react";
-import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Clock, Loader2 } from "lucide-react";
+import { academicApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/manage-courses")({
   component: ManageCourses,
 });
 
-const coursesData = [
-  {
-    id: 1,
-    name: "Mathematics",
-    code: "MATH101",
-    level: "Ordinary",
-    classes: 3,
-    students: 120,
-    teachers: 3,
-    duration: "6 months",
-    status: "Active",
-    description: "Fundamental mathematics covering algebra, geometry, and statistics"
-  },
-  {
-    id: 2,
-    name: "Physics",
-    code: "PHYS201",
-    level: "Advanced",
-    classes: 2,
-    students: 80,
-    teachers: 2,
-    duration: "6 months",
-    status: "Active",
-    description: "Advanced physics covering mechanics, thermodynamics, and electromagnetism"
-  },
-  {
-    id: 3,
-    name: "Chemistry",
-    code: "CHEM301",
-    level: "Advanced",
-    classes: 2,
-    students: 75,
-    teachers: 2,
-    duration: "6 months",
-    status: "Active",
-    description: "Organic and inorganic chemistry with laboratory components"
-  },
-  {
-    id: 4,
-    name: "Biology",
-    code: "BIO101",
-    level: "Ordinary",
-    classes: 2,
-    students: 90,
-    teachers: 2,
-    duration: "6 months",
-    status: "Active",
-    description: "Cell biology, genetics, and ecology"
-  },
-  {
-    id: 5,
-    name: "English",
-    code: "ENG101",
-    level: "Ordinary",
-    classes: 4,
-    students: 150,
-    teachers: 3,
-    duration: "6 months",
-    status: "Active",
-    description: "English language and literature with focus on communication skills"
-  },
-  {
-    id: 6,
-    name: "Computer Science",
-    code: "CS401",
-    level: "Advanced",
-    classes: 2,
-    students: 60,
-    teachers: 2,
-    duration: "6 months",
-    status: "Active",
-    description: "Programming, algorithms, and software development"
-  }
-];
-
 function ManageCourses() {
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [levelFilter, setLevelFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const filteredCourses = coursesData.filter(course => {
-    const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLevel = levelFilter === "all" || course.level.toLowerCase() === levelFilter.toLowerCase();
-    const matchesStatus = statusFilter === "all" || course.status.toLowerCase() === statusFilter.toLowerCase();
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const fetchCourses = async () => {
+    setLoading(true);
+    try {
+      const res = await academicApi.getSubjects();
+      setCourses(res.data || []);
+    } catch (err: any) {
+      toast.error("Failed to load courses");
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredCourses = courses.filter(course => {
+    const matchesSearch = course.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         course.code?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesLevel = levelFilter === "all" || course.level?.toLowerCase() === levelFilter.toLowerCase();
+    const matchesStatus = statusFilter === "all" || course.status?.toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesLevel && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-600">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="text-lg">Loading courses...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -158,7 +115,7 @@ function ManageCourses() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Courses</p>
-              <p className="text-xl font-bold text-gray-900">{coursesData.length}</p>
+              <p className="text-xl font-bold text-gray-900">{courses.length}</p>
             </div>
           </div>
         </div>
@@ -169,7 +126,7 @@ function ManageCourses() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Students</p>
-              <p className="text-xl font-bold text-gray-900">{coursesData.reduce((sum, course) => sum + course.students, 0)}</p>
+              <p className="text-xl font-bold text-gray-900">—</p>
             </div>
           </div>
         </div>
@@ -180,7 +137,7 @@ function ManageCourses() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Teachers</p>
-              <p className="text-xl font-bold text-gray-900">{coursesData.reduce((sum, course) => sum + course.teachers, 0)}</p>
+              <p className="text-xl font-bold text-gray-900">—</p>
             </div>
           </div>
         </div>
@@ -191,7 +148,7 @@ function ManageCourses() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Avg Duration</p>
-              <p className="text-xl font-bold text-gray-900">6 months</p>
+              <p className="text-xl font-bold text-gray-900">—</p>
             </div>
           </div>
         </div>

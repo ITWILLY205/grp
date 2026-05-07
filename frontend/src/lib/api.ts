@@ -45,8 +45,10 @@ export const academicApi = {
 export const peopleApi = {
   // Teachers
   getTeachers: () => api.get('/teachers'),
+  getTeacherById: (id: number) => api.get(`/teachers/${id}`),
   getTeacherMe: () => api.get('/teachers/me'),
   addTeacher: (data: any) => api.post('/teachers', data),
+  assignClasses: (teacherId: number, data: { subjects: string[], classes: string[] }) => api.post(`/teachers/${teacherId}/assignments`, data),
 
   // Students
   getStudents: () => api.get('/students'),

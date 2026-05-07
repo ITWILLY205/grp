@@ -11,15 +11,7 @@ export interface Teacher {
 }
 
 // Sample teachers with their assigned modules (subjects)
-const teachers: Teacher[] = [
-  { id: "TCH-001", firstName: "John", lastName: "Mugabo", email: "john@school.com", modules: ["Mathematics", "Physics"], department: "Mathematics" },
-  { id: "TCH-002", firstName: "Sarah", lastName: "Uwimana", email: "sarah@school.com", modules: ["Physics", "Chemistry"], department: "Science" },
-  { id: "TCH-003", firstName: "David", lastName: "Habimana", email: "david@school.com", modules: ["Chemistry", "Biology"], department: "Science" },
-  { id: "TCH-004", firstName: "Grace", lastName: "Mukamana", email: "grace@school.com", modules: ["Biology"], department: "Science" },
-  { id: "TCH-005", firstName: "Peter", lastName: "Niyonsaba", email: "peter@school.com", modules: ["English", "History"], department: "Languages" },
-  { id: "TCH-006", firstName: "Marie", lastName: "Iradukunda", email: "marie@school.com", modules: ["History", "Geography"], department: "Arts" },
-  { id: "TCH-007", firstName: "James", lastName: "Nshuti", email: "james@school.com", modules: ["Geography", "Computer Science"], department: "Arts" },
-];
+const teachers: Teacher[] = [];
 
 // Simulate the currently logged-in teacher
 // In a real app, this would be determined by auth/session
