@@ -278,6 +278,7 @@ router.post('/:id/assignments', authenticate, authorize('ADMIN'), async (req, re
     const schema = z.object({
       subjects: z.array(z.string().min(1)),
       classes: z.array(z.string().min(1)),
+      streams: z.array(z.number()).optional(),
     });
 
     const data = schema.parse(req.body);
@@ -312,26 +313,44 @@ router.post('/:id/assignments', authenticate, authorize('ADMIN'), async (req, re
       return res.status(400).json({ error: `Subjects not found: ${missingSubjects.join(', ')}` });
     }
 
-    // Resolve class names to IDs and get all their streams
-    const classes = await prisma.class.findMany({
-      where: {
-        name: {
-          in: data.classes,
+    let streams: { id: number }[] = [];
+
+    // If specific stream IDs are provided, use those
+    if (data.streams && data.streams.length > 0) {
+      const foundStreams = await prisma.stream.findMany({
+        where: {
+          id: {
+            in: data.streams,
+          },
         },
-      },
-      include: {
-        streams: true,
-      },
-    });
+      });
+      const missingStreamIds = data.streams.filter(id => !foundStreams.find(s => s.id === id));
+      if (missingStreamIds.length > 0) {
+        return res.status(400).json({ error: `Streams not found: ${missingStreamIds.join(', ')}` });
+      }
+      streams = foundStreams;
+    } else {
+      // Fallback: resolve class names to IDs and get all their streams
+      const classes = await prisma.class.findMany({
+        where: {
+          name: {
+            in: data.classes,
+          },
+        },
+        include: {
+          streams: true,
+        },
+      });
 
-    const missingClasses = data.classes.filter(name => !classes.find(c => c.name === name));
-    if (missingClasses.length > 0) {
-      return res.status(400).json({ error: `Classes not found: ${missingClasses.join(', ')}` });
-    }
+      const missingClasses = data.classes.filter(name => !classes.find(c => c.name === name));
+      if (missingClasses.length > 0) {
+        return res.status(400).json({ error: `Classes not found: ${missingClasses.join(', ')}` });
+      }
 
-    const streams = classes.flatMap(c => c.streams);
-    if (streams.length === 0) {
-      return res.status(400).json({ error: 'Selected classes have no streams. Please add streams first.' });
+      streams = classes.flatMap(c => c.streams);
+      if (streams.length === 0) {
+        return res.status(400).json({ error: 'Selected classes have no streams. Please add streams first.' });
+      }
     }
 
     // Replace existing assignments for this teacher in the current term

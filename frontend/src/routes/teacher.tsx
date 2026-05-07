@@ -20,7 +20,30 @@ const teacherNav = [
 ];
 
 export const Route = createFileRoute("/teacher")({
+  beforeLoad: async () => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+
+    if (!token) {
+      throw { to: '/staff-login' };
+    }
+
+    // Verify the user has TEACHER role
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (user.role !== 'TEACHER') {
+          throw { to: '/staff-login' };
+        }
+      } catch {
+        throw { to: '/staff-login' };
+      }
+    } else {
+      throw { to: '/staff-login' };
+    }
+  },
   component: TeacherLayout,
+  errorComponent: () => null,
 });
 
 function TeacherLayout() {

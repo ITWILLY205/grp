@@ -16,10 +16,12 @@ function AssignClasses() {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const [streams, setStreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [teacherSearch, setTeacherSearch] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [selectedStreams, setSelectedStreams] = useState<number[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -28,14 +30,16 @@ function AssignClasses() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [teachersRes, subjectsRes, classesRes] = await Promise.all([
+      const [teachersRes, subjectsRes, classesRes, streamsRes] = await Promise.all([
         peopleApi.getTeachers(),
         academicApi.getSubjects(),
         academicApi.getClasses(),
+        academicApi.getStreams(),
       ]);
       setTeachers(teachersRes.data || []);
       setSubjects(subjectsRes.data || []);
       setClasses(classesRes.data || []);
+      setStreams(streamsRes.data || []);
     } catch (err: any) {
       toast.error("Failed to load data");
     } finally {
@@ -48,8 +52,10 @@ function AssignClasses() {
     const assignments = selectedTeacher.assignments || [];
     const currentSubjects = [...new Set(assignments.map((a: any) => a.subject?.name).filter(Boolean))] as string[];
     const currentClasses = [...new Set(assignments.map((a: any) => a.stream?.class?.name || a.class?.name).filter(Boolean))] as string[];
+    const currentStreamIds = [...new Set(assignments.map((a: any) => a.stream?.id).filter(Boolean))] as number[];
     setSelectedSubjects(currentSubjects.length ? currentSubjects : []);
     setSelectedClasses(currentClasses.length ? currentClasses : []);
+    setSelectedStreams(currentStreamIds.length ? currentStreamIds : []);
   };
 
   if (loading) {
@@ -89,15 +95,24 @@ function AssignClasses() {
     );
   };
 
+  const handleStreamToggle = (streamId: number) => {
+    setSelectedStreams(prev =>
+      prev.includes(streamId)
+        ? prev.filter(id => id !== streamId)
+        : [...prev, streamId]
+    );
+  };
+
   const handleAssign = async () => {
-    if (selectedSubjects.length === 0 || selectedClasses.length === 0) {
-      toast.error("Please select at least one subject and one class");
+    if (selectedSubjects.length === 0 || selectedClasses.length === 0 || selectedStreams.length === 0) {
+      toast.error("Please select at least one subject, one class, and one stream");
       return;
     }
     try {
       await peopleApi.assignClasses(teacher.id, {
         subjects: selectedSubjects,
         classes: selectedClasses,
+        streams: selectedStreams,
       });
       toast.success(`Assignment saved successfully for ${teacherName}!`);
       setTimeout(() => {
@@ -195,6 +210,7 @@ function AssignClasses() {
                     setTeacher(null);
                     setSelectedSubjects([]);
                     setSelectedClasses([]);
+                    setSelectedStreams([]);
                     setTeacherSearch("");
                   }}
                   className="text-gray-500 hover:text-gray-700 text-sm"
@@ -275,14 +291,49 @@ function AssignClasses() {
             </div>
           )}
 
+          {/* Streams Selection - Only show after teacher is selected */}
+          {teacher && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Users className="h-5 w-5 text-purple-600" />
+                Select Streams to Assign
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {streams.map((stream) => (
+                  <button
+                    key={stream.id}
+                    onClick={() => handleStreamToggle(stream.id)}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      selectedStreams.includes(stream.id)
+                        ? "bg-purple-600 text-white border-purple-600"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {stream.name} <span className="text-xs opacity-75">({stream.class?.name || "No class"})</span>
+                  </button>
+                ))}
+              </div>
+              {streams.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">No streams available. Please add streams in Academic Structure first.</p>
+              )}
+              {selectedStreams.length > 0 && (
+                <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+                  <p className="text-sm text-purple-700">
+                    <strong>Selected Streams:</strong> {streams.filter(s => selectedStreams.includes(s.id)).map(s => `${s.name} (${s.class?.name})`).join(", ")}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Action Buttons - Only show after teacher is selected */}
           {teacher && (
             <div className="flex gap-3">
               <button
                 onClick={handleAssign}
-                disabled={selectedSubjects.length === 0 || selectedClasses.length === 0}
+                disabled={selectedSubjects.length === 0 || selectedClasses.length === 0 || selectedStreams.length === 0}
                 className={`px-6 py-3 rounded-lg font-medium ${
-                  selectedSubjects.length > 0 && selectedClasses.length > 0
+                  selectedSubjects.length > 0 && selectedClasses.length > 0 && selectedStreams.length > 0
                     ? "bg-blue-600 text-white hover:bg-blue-700"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
