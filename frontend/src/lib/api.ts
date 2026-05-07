@@ -36,6 +36,7 @@ export const academicApi = {
   getClasses: () => api.get('/academics/classes'),
   addClass: (name: string) => api.post('/academics/classes', { name }),
   getStreams: () => api.get('/academics/streams'),
+  addStream: (classId: number, name: string) => api.post('/academics/streams', { class_id: classId, name }),
 
   // Subjects
   getSubjects: () => api.get('/academics/subjects'),

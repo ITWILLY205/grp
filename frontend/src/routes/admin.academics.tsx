@@ -92,12 +92,14 @@ function AcademicStructure() {
   const [years, setYears] = useState<{id: number, name: string, status: string}[]>([]);
   const [terms, setTerms] = useState<{id: number, name: string, year_name: string, start_date: string, end_date: string}[]>([]);
   const [classes, setClasses] = useState<{id: number, name: string}[]>([]);
+  const [streams, setStreams] = useState<{id: number, name: string, class_id: number, class?: {name: string}}[]>([]);
   const [subjects, setSubjects] = useState<{id: number, name: string, code?: string, category?: string}[]>([]);
 
   useEffect(() => {
     fetchYears();
     fetchTerms();
     fetchClasses();
+    fetchStreams();
     fetchSubjects();
   }, []);
 
@@ -128,6 +130,15 @@ function AcademicStructure() {
     }
   };
 
+  const fetchStreams = async () => {
+    try {
+      const response = await academicApi.getStreams();
+      setStreams(response.data);
+    } catch (error) {
+      toast.error("Failed to load streams");
+    }
+  };
+
   const fetchSubjects = async () => {
     try {
       const response = await academicApi.getSubjects();
@@ -141,6 +152,9 @@ function AcademicStructure() {
   const [newYearName, setNewYearName] = useState("");
   const [showAddClass, setShowAddClass] = useState(false);
   const [newClassName, setNewClassName] = useState("");
+  const [showAddStream, setShowAddStream] = useState(false);
+  const [newStreamName, setNewStreamName] = useState("");
+  const [selectedClassForStream, setSelectedClassForStream] = useState<number | null>(null);
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [editingYearId, setEditingYearId] = useState<number | null>(null);
@@ -192,6 +206,21 @@ function AcademicStructure() {
         fetchClasses();
       } catch (error) {
         toast.error("Failed to save class to database");
+      }
+    }
+  };
+
+  const handleAddStream = async () => {
+    if (newStreamName.trim() && selectedClassForStream !== null) {
+      try {
+        await academicApi.addStream(selectedClassForStream, newStreamName.trim());
+        toast.success("Stream added successfully");
+        setNewStreamName("");
+        setSelectedClassForStream(null);
+        setShowAddStream(false);
+        fetchStreams();
+      } catch (error) {
+        toast.error("Failed to save stream to database");
       }
     }
   };
@@ -416,6 +445,65 @@ function AcademicStructure() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Streams */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-medium text-gray-900">Streams</h3>
+          <button onClick={() => setShowAddStream(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <Plus className="h-4 w-4" />
+            Add Stream
+          </button>
+        </div>
+
+        {/* Add New Stream Form */}
+        {showAddStream && (
+          <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 mb-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Add New Stream</h3>
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Class</label>
+                <select
+                  value={selectedClassForStream ?? ""}
+                  onChange={(e) => setSelectedClassForStream(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value="">-- Select Class --</option>
+                  {classes.map((cls) => (
+                    <option key={cls.id} value={cls.id}>{cls.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stream Name</label>
+                <input
+                  type="text"
+                  value={newStreamName}
+                  onChange={(e) => setNewStreamName(e.target.value)}
+                  placeholder="e.g. A, B, C or East, West"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <button onClick={handleAddStream} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Add</button>
+              <button onClick={() => { setShowAddStream(false); setNewStreamName(""); setSelectedClassForStream(null); }} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {streams.map((stream) => (
+            <div key={stream.id} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-gray-900">{stream.name}</h4>
+              </div>
+              <p className="text-sm text-gray-600">Class: {stream.class?.name || "Unknown"}</p>
+            </div>
+          ))}
+        </div>
+        {streams.length === 0 && (
+          <p className="text-sm text-gray-500 mt-2">No streams yet. Add streams to each class so teachers can be assigned.</p>
+        )}
       </div>
 
       {/* Subjects */}
