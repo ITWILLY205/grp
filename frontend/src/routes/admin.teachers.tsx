@@ -1631,8 +1631,9 @@ function AssignClasses({ teacher, onBack, setTeachers }: { teacher: Teacher; onB
 
       toast.success(`Classes assigned successfully for ${teacher.name}!`);
       onBack();
-    } catch (error) {
-      toast.error("Failed to save assignment. Please try again.");
+    } catch (error: any) {
+      const message = error?.response?.data?.error || error?.message || "Failed to save assignment. Please try again.";
+      toast.error(Array.isArray(message) ? JSON.stringify(message) : message);
     } finally {
       setIsSaving(false);
     }

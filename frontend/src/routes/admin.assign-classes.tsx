@@ -103,8 +103,9 @@ function AssignClasses() {
       setTimeout(() => {
         navigate({ to: "/admin/teachers" });
       }, 1500);
-    } catch (error) {
-      toast.error("Failed to save assignment. Please try again.");
+    } catch (error: any) {
+      const message = error?.response?.data?.error || error?.message || "Failed to save assignment. Please try again.";
+      toast.error(Array.isArray(message) ? JSON.stringify(message) : message);
     }
   };
 
