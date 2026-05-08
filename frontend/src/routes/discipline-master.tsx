@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import {
   Shield,
@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Bell,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface DisciplineCase {
   id: string;
@@ -57,17 +58,55 @@ const dodNav = [
 ];
 
 export const Route = createFileRoute('/discipline-master')({
+  beforeLoad: ({ location }) => {
+    const userJson = localStorage.getItem("user");
+    const token = localStorage.getItem("token");
+
+    if (!token || !userJson) {
+      throw redirect({
+        to: "/login-staff",
+        search: { redirect: location.href },
+      });
+    }
+
+    try {
+      const user = JSON.parse(userJson);
+      if (user.role !== "DISCIPLINE_MASTER") {
+        throw redirect({ to: "/" });
+      }
+    } catch (e) {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      throw redirect({ to: "/login-staff" });
+    }
+  },
   component: DisciplineMasterLayout,
 });
 
 function DisciplineMasterLayout() {
+  const [userName, setUserName] = useState("Discipline Officer");
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setUserName(user.full_name || user.username || "Discipline Officer");
+        setUserEmail(user.email || user.username || "");
+      } catch {
+        // ignore parse error
+      }
+    }
+  }, []);
+
   return (
     <DashboardShell
       role="dod"
       roleLabel="Discipline on Duty"
       navItems={dodNav}
-      userName="DOD Officer"
-      userEmail="dod@scholar-sphere.com"
+      userName={userName}
+      userEmail={userEmail}
     >
       <Outlet />
     </DashboardShell>
